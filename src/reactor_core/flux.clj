@@ -4,7 +4,7 @@
    [reactive-streams.core]
    [reactor-core.protocols :as p]
    [reactor-core.util.sam :as sam]
-   [reactor-core.util.utils :as utils])
+   [reactor-core.util.utils :as u])
   (:import
    (reactor.core.publisher Mono Flux)
    (org.reactivestreams Publisher Subscriber)
@@ -32,8 +32,8 @@
                                               (sam/->consumer state-consumer))))
 
 (defn interval
-  ([period] (Flux/interval (utils/duration period)))
-  ([delay period] (Flux/interval (utils/delay-duration delay) (utils/duration period))))
+  ([period] (Flux/interval (u/ms->duration period)))
+  ([delay period] (Flux/interval (u/delay->duration delay) (u/ms->duration period))))
 
 (defn merge [sources]
   (Flux/merge ^Iterable sources))
@@ -81,12 +81,12 @@
      :else (Flux/zip ^Iterable sources (sam/->function f))))
   ([sources f prefetch]
    (cond
-     (utils/array? sources) (Flux/zip (sam/->function f) ^int prefetch ^"[Lorg.reactivestreams.Publisher;" (to-array sources))
+     (u/array? sources) (Flux/zip (sam/->function f) ^int prefetch ^"[Lorg.reactivestreams.Publisher;" (to-array sources))
      :else (Flux/zip ^Iterable sources ^int prefetch (sam/->function f)))))
 
 (defn- from-dispatcher [x]
   (cond
-    (utils/array? x) ::array
+    (u/array? x) ::array
     (instance? Iterable x) ::iterable
     :else (type x)))
 
@@ -162,8 +162,8 @@
   (-subscribe-on [flux scheduler] (.subscribeOn flux scheduler))
   (-subscribe-with [s p] ((.subscribe ^Publisher p ^Subscriber s) s))
   p/DelayOperator
-  (-delay-elements [flux duration] (.delayElements flux (utils/duration duration)))
-  (-delay-sequence [flux duration] (.delaySequence flux (utils/duration duration)))
+  (-delay-elements [flux duration] (.delayElements flux (u/ms->duration duration)))
+  (-delay-sequence [flux duration] (.delaySequence flux (u/ms->duration duration)))
   p/MergeOperator
   (-merge-with [flux other] (.mergeWith flux ^Publisher other))
   p/OnErrorOperator
@@ -198,7 +198,7 @@
   p/SwitchOperator
   (-switch-if-empty [flux alternative] (.switchIfEmpty flux alternative))
   p/CacheOperator
-  (-cache [flux ttl max-items] (.cache flux max-items ^Duration (utils/duration ttl)))
+  (-cache [flux ttl max-items] (.cache flux max-items ^Duration (u/ms->duration ttl)))
   p/ThenOperator
   (-then
     ([flux] (.then flux))
@@ -216,7 +216,7 @@
   (-ignore-elements [flux] (.ignoreElements flux))
   p/BufferOperator
   (-buffer [flux max-size skip] (.buffer flux max-size skip))
-  (-buffer-timeout [flux max-size duration] (.bufferTimeout flux max-size (utils/duration duration)))
+  (-buffer-timeout [flux max-size duration] (.bufferTimeout flux max-size (u/ms->duration duration)))
   (-buffer-until [flux f] (.bufferUntil flux (sam/->predicate f)))
   (-buffer-while [flux f] (.bufferWhile flux (sam/->predicate f)))
   p/CountOperator

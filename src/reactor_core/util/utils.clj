@@ -7,10 +7,10 @@
   (-> (Instant/ofEpochMilli x)
       (.minusMillis (System/currentTimeMillis))))
 
-(defn duration ^Duration [d]
+(defn ms->duration ^Duration [d]
   (if (instance? Duration d) d (Duration/ofMillis d)))
 
-(defn delay-duration ^Duration [delay]
+(defn delay->duration ^Duration [delay]
   (cond
     (inst? delay) (Duration/ofMillis (inst->delay delay))
-    :else (duration delay)))
+    :else (ms->duration delay)))

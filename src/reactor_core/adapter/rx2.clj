@@ -1,5 +1,5 @@
 (ns reactor-core.adapter.rx2
-  (:require [reactor-core.util.utils :as u])
+  (:require [reactor-core.util.utils :refer [keyword->enum]])
   (:import
    (reactor.adapter.rxjava RxJava2Adapter)
    (io.reactivex BackpressureStrategy)))
@@ -29,7 +29,7 @@
   ([observable] (observable->flux :buffer observable))
   ([strategy observable] (RxJava2Adapter/observableToFlux
                           observable
-                          (u/keyword->enum BackpressureStrategy strategy))))
+                          (keyword->enum BackpressureStrategy strategy))))
 
 (defn flux->observable [flux]
   (RxJava2Adapter/fluxToObservable flux))

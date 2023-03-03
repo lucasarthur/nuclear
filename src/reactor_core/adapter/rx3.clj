@@ -1,7 +1,7 @@
 (ns reactor-core.adapter.rx3
   (:require
-   [reactor-core.util.utils :as u]
-   [reactor-core.util.sam :as sam])
+   [reactor-core.util.utils :refer [keyword->enum]]
+   [reactor-core.util.sam :refer [->consumer]])
   (:import
    (reactor.adapter.rxjava RxJava3Adapter)
    (io.reactivex BackpressureStrategy)))
@@ -17,7 +17,7 @@
 
 (defn mono->completable
   ([mono] (RxJava3Adapter/monoToCompletable mono))
-  ([discard-handler mono] (RxJava3Adapter/monoToCompletable mono (sam/->consumer discard-handler))))
+  ([discard-handler mono] (RxJava3Adapter/monoToCompletable mono (->consumer discard-handler))))
 
 (defn completable->mono [completable]
   (RxJava3Adapter/completableToMono completable))
@@ -32,7 +32,7 @@
   ([observable] (observable->flux :buffer observable))
   ([strategy observable] (RxJava3Adapter/observableToFlux
                           observable
-                          (u/keyword->enum BackpressureStrategy strategy))))
+                          (keyword->enum BackpressureStrategy strategy))))
 
 (defn flux->observable [flux]
   (RxJava3Adapter/fluxToObservable flux))

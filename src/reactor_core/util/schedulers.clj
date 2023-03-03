@@ -1,4 +1,4 @@
-(ns reactor-core.schedulers
+(ns reactor-core.util.schedulers
   (:import (reactor.core.scheduler Schedulers)))
 
 (def bounded-elastic (Schedulers/boundedElastic))

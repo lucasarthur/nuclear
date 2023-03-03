@@ -1,4 +1,6 @@
 (ns reactor-core.util.utils
+  (:refer-clojure :exclude [replace])
+  (:require [clojure.string :refer [replace upper-case]])
   (:import (java.time Duration Instant)))
 
 (defn array? ^Boolean [x] (.isArray (class x)))
@@ -14,3 +16,8 @@
   (cond
     (inst? delay) (Duration/ofMillis (inst->delay delay))
     :else (ms->duration delay)))
+
+(defn keyword->enum [type keyword]
+  (Enum/valueOf type (-> (str keyword)
+                         (replace ":" "")
+                         (upper-case))))

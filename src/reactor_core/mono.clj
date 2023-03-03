@@ -4,7 +4,7 @@
    [reactive-streams.core]
    [reactor-core.protocols :as p]
    [reactor-core.util.sam :as sam]
-   [reactor-core.util.utils :as u])
+   [reactor-core.util.utils :refer [delay->duration ms->duration]])
   (:import
    (reactor.core.publisher Mono)
    (org.reactivestreams Publisher Subscriber)
@@ -30,7 +30,7 @@
   (Mono/create (sam/->consumer emitter)))
 
 (defn delay [duration]
-  (Mono/delay (u/delay->duration duration)))
+  (Mono/delay (delay->duration duration)))
 
 (defn publisher->mono [publisher]
   (Mono/from ^Publisher publisher))
@@ -130,7 +130,7 @@
   (-subscribe-on [mono scheduler] (.subscribeOn mono scheduler))
   (-subscribe-with [s p] ((.subscribe ^Publisher p ^Subscriber s) s))
   p/DelayOperator
-  (-delay-elements [mono duration] (.delayElement mono (u/ms->duration duration)))
+  (-delay-elements [mono duration] (.delayElement mono (ms->duration duration)))
   p/MergeOperator
   (-merge-with [mono other] (.mergeWith mono ^Publisher other))
   p/OnErrorOperator
@@ -165,7 +165,7 @@
   p/SwitchOperator
   (-switch-if-empty [mono alternative] (.switchIfEmpty mono alternative))
   p/CacheOperator
-  (-cache [mono ttl _] (.cache mono ^Duration (u/ms->duration ttl)))
+  (-cache [mono ttl _] (.cache mono ^Duration (ms->duration ttl)))
   p/ThenOperator
   (-then
     ([mono] (.then mono))

@@ -238,11 +238,11 @@
   ([f publisher] (p/-zip-when publisher f))
   ([combinator f publisher] (p/-zip-when publisher f combinator)))
 
-(defn subscribe
-  ([publisher] (subscribe nil nil nil publisher))
-  ([on-next publisher] (subscribe on-next nil publisher))
-  ([on-next on-error publisher] (subscribe on-next on-error nil publisher))
-  ([on-next on-error on-complete publisher] (subscribe on-next on-error on-complete nil publisher))
+(defn subscribe!
+  ([publisher] (subscribe! nil nil nil publisher))
+  ([on-next publisher] (subscribe! on-next nil publisher))
+  ([on-next on-error publisher] (subscribe! on-next on-error nil publisher))
+  ([on-next on-error on-complete publisher] (subscribe! on-next on-error on-complete nil publisher))
   ([on-next on-error on-complete on-subscribe publisher] (p/-subscribe publisher on-next on-error on-complete on-subscribe)))
 
 (defn subscribe-on [scheduler publisher]
@@ -251,8 +251,8 @@
 (defn subscribe-with [subscriber publisher]
   (p/-subscribe-with subscriber publisher))
 
-(defn publish
-  ([publisher] (publish identity publisher))
+(defn publish!
+  ([publisher] (publish! identity publisher))
   ([transformer publisher] (p/-publish publisher transformer)))
 
 (defn publish-on [scheduler publisher]

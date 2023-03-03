@@ -4,15 +4,16 @@
    [reactive-streams.core]
    [reactor-core.protocols :as p]
    [reactor-core.util.sam :as sam]
-   [reactor-core.util.utils :as u])
+   [reactor-core.util.utils :refer [delay->duration ms->duration array? keyword->enum]])
   (:import
    (reactor.core.publisher Mono Flux)
+   (reactor.core.publisher FluxSink$OverflowStrategy)
    (org.reactivestreams Publisher Subscriber)
    (java.util.stream Stream)
    (java.time Duration)))
 
-(defn just [& data]
-  (Flux/just (into-array data)))
+(defn just [values]
+  (Flux/just (to-array values)))
 
 (defn empty []
   (Flux/empty))
@@ -32,8 +33,8 @@
                                               (sam/->consumer state-consumer))))
 
 (defn interval
-  ([period] (Flux/interval (u/ms->duration period)))
-  ([delay period] (Flux/interval (u/delay->duration delay) (u/ms->duration period))))
+  ([period] (Flux/interval (ms->duration period)))
+  ([delay period] (Flux/interval (delay->duration delay) (ms->duration period))))
 
 (defn merge [sources]
   (Flux/merge ^Iterable sources))
@@ -47,8 +48,9 @@
 (defn create
   ([emitter] (create emitter :buffer))
   ([emitter back-pressure] (create emitter back-pressure false))
-  ([emitter back-pressure push?]
-   (apply (if push? #(Flux/push %1 %2) #(Flux/create %1 %2)) (sam/->consumer emitter) back-pressure)))
+  ([emitter back-pressure push?] (apply (if push? #(Flux/push %1 %2) #(Flux/create %1 %2))
+                                        [(sam/->consumer emitter)
+                                         (keyword->enum FluxSink$OverflowStrategy back-pressure)])))
 
 (defn defer [f]
   (Flux/defer (sam/->supplier f)))
@@ -81,12 +83,12 @@
      :else (Flux/zip ^Iterable sources (sam/->function f))))
   ([sources f prefetch]
    (cond
-     (u/array? sources) (Flux/zip (sam/->function f) ^int prefetch ^"[Lorg.reactivestreams.Publisher;" (to-array sources))
+     (array? sources) (Flux/zip (sam/->function f) ^int prefetch ^"[Lorg.reactivestreams.Publisher;" (to-array sources))
      :else (Flux/zip ^Iterable sources ^int prefetch (sam/->function f)))))
 
 (defn- from-dispatcher [x]
   (cond
-    (u/array? x) ::array
+    (array? x) ::array
     (instance? Iterable x) ::iterable
     :else (type x)))
 
@@ -125,8 +127,8 @@
   (-skip [flux n] (.skip flux ^long n))
   p/ZipOperator
   (-zip-with
-   ([flux other] (.zipWith flux ^Publisher other))
-   ([flux other f] (.zipWith flux ^Publisher other (sam/->bi-function f))))
+    ([flux other] (.zipWith flux ^Publisher other))
+    ([flux other f] (.zipWith flux ^Publisher other (sam/->bi-function f))))
   p/HideOperator
   (-hide [flux] (.hide flux))
   p/TakeUntilOperator
@@ -162,8 +164,8 @@
   (-subscribe-on [flux scheduler] (.subscribeOn flux scheduler))
   (-subscribe-with [s p] ((.subscribe ^Publisher p ^Subscriber s) s))
   p/DelayOperator
-  (-delay-elements [flux duration] (.delayElements flux (u/ms->duration duration)))
-  (-delay-sequence [flux duration] (.delaySequence flux (u/ms->duration duration)))
+  (-delay-elements [flux duration] (.delayElements flux (ms->duration duration)))
+  (-delay-sequence [flux duration] (.delaySequence flux (ms->duration duration)))
   p/MergeOperator
   (-merge-with [flux other] (.mergeWith flux ^Publisher other))
   p/OnErrorOperator
@@ -198,7 +200,7 @@
   p/SwitchOperator
   (-switch-if-empty [flux alternative] (.switchIfEmpty flux alternative))
   p/CacheOperator
-  (-cache [flux ttl max-items] (.cache flux max-items ^Duration (u/ms->duration ttl)))
+  (-cache [flux ttl max-items] (.cache flux max-items ^Duration (ms->duration ttl)))
   p/ThenOperator
   (-then
     ([flux] (.then flux))
@@ -216,7 +218,7 @@
   (-ignore-elements [flux] (.ignoreElements flux))
   p/BufferOperator
   (-buffer [flux max-size skip] (.buffer flux max-size skip))
-  (-buffer-timeout [flux max-size duration] (.bufferTimeout flux max-size (u/ms->duration duration)))
+  (-buffer-timeout [flux max-size duration] (.bufferTimeout flux max-size (ms->duration duration)))
   (-buffer-until [flux f] (.bufferUntil flux (sam/->predicate f)))
   (-buffer-while [flux f] (.bufferWhile flux (sam/->predicate f)))
   p/CountOperator
@@ -242,8 +244,8 @@
   (-on-backpressure-buffer [flux] (.onBackpressureBuffer flux))
   p/ReduceOperator
   (-reduce
-   ([flux f] (.reduce flux (sam/->bi-function f)))
-   ([flux initial f] (.reduce flux initial (sam/->bi-function f))))
+    ([flux f] (.reduce flux (sam/->bi-function f)))
+    ([flux initial f] (.reduce flux initial (sam/->bi-function f))))
   p/HandleOperator
   (-handle [flux f] (.handle flux (sam/->bi-consumer f))))
 

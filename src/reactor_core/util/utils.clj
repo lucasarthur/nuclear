@@ -17,7 +17,10 @@
     (inst? delay) (Duration/ofMillis (inst->delay delay))
     :else (ms->duration delay)))
 
+(defn keyword->str [keyword]
+  (-> (str keyword)
+      (replace ":" "")
+      (upper-case)))
+
 (defn keyword->enum [type keyword]
-  (Enum/valueOf type (-> (str keyword)
-                         (replace ":" "")
-                         (upper-case))))
+  (Enum/valueOf type (keyword->str keyword)))

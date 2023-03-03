@@ -6,5 +6,7 @@
   :dependencies [[org.clojure/clojure "1.11.1"]
                  [io.projectreactor/reactor-core "3.5.3"]
                  [io.projectreactor/reactor-test "3.5.3"]
-                 [io.projectreactor.addons/reactor-adapter "3.5.0"]]
+                 [io.projectreactor.addons/reactor-adapter "3.5.0"]
+                 [io.reactivex.rxjava2/rxjava "2.2.8"]
+                 [io.reactivex.rxjava3/rxjava "3.1.5"]]
   :target-path "target/%s")

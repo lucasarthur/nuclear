@@ -1,5 +1,5 @@
 (ns reactor-core.util.utils
-  (:require [clojure.string :as s])
+  (:require [clojure.string :refer [replace upper-case]])
   (:import (java.time Duration Instant)))
 
 (defn array? ^Boolean [x] (.isArray (class x)))
@@ -18,5 +18,5 @@
 
 (defn keyword->enum [type keyword]
   (Enum/valueOf type (-> (str keyword)
-                         (s/replace ":" "")
-                         (s/upper-case))))
+                         (replace ":" "")
+                         (upper-case))))

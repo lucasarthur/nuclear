@@ -12,8 +12,8 @@
    (java.util.stream Stream)
    (java.time Duration)))
 
-(defn just [& data]
-  (Flux/just (into-array data)))
+(defn just [values]
+  (Flux/just (to-array values)))
 
 (defn empty []
   (Flux/empty))

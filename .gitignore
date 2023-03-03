@@ -14,9 +14,11 @@ target/
 *.jar
 *.class
 
-
 # VSCode
 .vscode/
+.calva/
+.clj-kondo/
+.lsp/
 
 # Eclipse stuff
 .project

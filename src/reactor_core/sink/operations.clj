@@ -1,5 +1,9 @@
 (ns reactor-core.sink.operations
-  (:require [reactor-core.sink.protocols :as p]))
+  (:require
+   [reactor-core.sink.empty]
+   [reactor-core.sink.many]
+   [reactor-core.sink.one]
+   [reactor-core.sink.protocols :as p]))
 
 (defn try-emit-value [value sink]
   (p/-try-emit-value sink value))
@@ -17,5 +21,8 @@
 (defn subscriber-count [sink]
   (p/-subscriber-count sink))
 
-(defn ->publisher [sink]
-  (p/-as-publisher sink))
+(defn ->flux [many]
+  (.asFlux many))
+
+(defn ->mono [one-or-empty]
+  (.asMono one-or-empty))

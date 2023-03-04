@@ -1,4 +1,4 @@
-(defproject com.lv.reactor/reactor-clj "1.0.0"
+(defproject reactor-clj "1.0.0"
   :description "clojure wrapper for project reactor"
   :url "https://github.com/lucasarthur/reactor-clj"
   :license {:name "GNU General Public License v3.0"
@@ -8,5 +8,4 @@
                  [io.projectreactor/reactor-test "3.5.3"]
                  [io.projectreactor.addons/reactor-adapter "3.5.0"]
                  [io.reactivex.rxjava2/rxjava "2.2.8"]
-                 [io.reactivex.rxjava3/rxjava "3.1.5"]]
-  :target-path "target/%s")
+                 [io.reactivex.rxjava3/rxjava "3.1.5"]])

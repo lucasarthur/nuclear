@@ -1,4 +1,4 @@
-(ns reactor-core.sink.protocols)
+(ns nuke.sink.protocols)
 
 (defprotocol EmitOperator
   (-try-emit-value [sink value])
@@ -8,6 +8,3 @@
 
 (defprotocol CountOperator
   (-subscriber-count [sink]))
-
-(defprotocol AsPublisherOperator
-  (-as-publisher [sink]))

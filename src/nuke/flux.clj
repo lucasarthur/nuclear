@@ -1,10 +1,9 @@
-(ns reactor-core.flux
+(ns nuke.flux
   (:refer-clojure :exclude [merge concat empty range])
   (:require
-   [reactive-streams.core]
-   [reactor-core.protocols :as p]
-   [reactor-core.util.sam :as sam]
-   [reactor-core.util.utils :refer [delay->duration ms->duration array? keyword->enum]])
+   [nuke.protocols :as p]
+   [nuke.util.sam :as sam]
+   [nuke.util :refer [delay->duration ms->duration array? keyword->enum]])
   (:import
    (reactor.core.publisher Mono Flux)
    (reactor.core.publisher FluxSink$OverflowStrategy)
@@ -156,11 +155,12 @@
   (-finally! [flux f] (.doFinally flux (sam/->consumer f)))
   p/SubscribeOperator
   (-subscribe
-    [flux on-next on-error on-complete on-subscribe] (.subscribe flux
-                                                                 (sam/->consumer on-next)
-                                                                 (sam/->consumer on-error)
-                                                                 (sam/->runnable on-complete)
-                                                                 (sam/->consumer on-subscribe)))
+    [flux on-next on-error on-complete on-subscribe]
+    (.subscribe flux
+                (sam/->consumer on-next)
+                (sam/->consumer on-error)
+                (sam/->runnable on-complete)
+                (sam/->consumer on-subscribe)))
   (-subscribe-on [flux scheduler] (.subscribeOn flux scheduler))
   (-subscribe-with [s p] ((.subscribe ^Publisher p ^Subscriber s) s))
   p/DelayOperator

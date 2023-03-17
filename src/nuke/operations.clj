@@ -1,9 +1,9 @@
-(ns reactor-core.operations
+(ns nuke.operations
   (:refer-clojure :exclude [reduce distinct next count repeat merge-with filter map mapcat take take-last take-while])
   (:require
-   [reactor-core.flux]
-   [reactor-core.mono]
-   [reactor-core.protocols :as p]))
+   [nuke.flux]
+   [nuke.mono]
+   [nuke.protocols :as p]))
 
 (defn filter [predicate publisher]
   (p/-filter publisher predicate))

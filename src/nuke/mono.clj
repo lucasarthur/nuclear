@@ -1,15 +1,15 @@
-(ns reactor-core.mono
+(ns nuke.mono
   (:refer-clojure :exclude [when delay empty])
   (:require
-   [reactive-streams.core]
-   [reactor-core.protocols :as p]
-   [reactor-core.util.sam :as sam]
-   [reactor-core.util.utils :refer [delay->duration ms->duration]])
+   [nuke.protocols :as p]
+   [nuke.util.sam :as sam]
+   [nuke.util :refer [delay->duration ms->duration]])
   (:import
-   (reactor.core.publisher Mono)
+   (reactor.core.publisher Mono Flux)
    (org.reactivestreams Publisher Subscriber)
    (java.time Duration)
-   (java.util.concurrent CompletionStage)))
+   (java.util.concurrent Future)
+   (com.spikhalskiy.futurity Futurity)))
 
 (defn just [data]
   (Mono/just data))
@@ -32,19 +32,19 @@
 (defn delay [duration]
   (Mono/delay (delay->duration duration)))
 
-(defn publisher->mono [publisher]
-  (Mono/from ^Publisher publisher))
+(derive ::publisher ::mono)
+(derive ::publisher ::flux)
+(derive Mono ::mono)
+(derive Flux ::flux)
 
-(defn callable->mono [callable]
-  (Mono/fromCallable (sam/->callable callable)))
+(defmulti from ^Mono #(if (future? %) ::promise (type %)))
+(defmethod from ::publisher [p] (Mono/from p))
+(defmethod from ::promise [^Future p] (-> p Futurity/shift Mono/fromFuture))
 
-(defn promise->mono [promise]
-  (Mono/fromCompletionStage ^CompletionStage promise))
-
-(defn runnable->mono [runnable]
+(defn from-runnable [runnable]
   (Mono/fromRunnable (sam/->runnable runnable)))
 
-(defn supplier->mono [supplier]
+(defn from-supplier [supplier]
   (Mono/fromSupplier (sam/->supplier supplier)))
 
 (defn ignoring-elements [source]
@@ -122,11 +122,12 @@
   (-finally! [mono f] (.doFinally mono (sam/->consumer f)))
   p/SubscribeOperator
   (-subscribe
-    [mono on-next on-error on-complete on-subscribe] (.subscribe mono
-                                                                 (sam/->consumer on-next)
-                                                                 (sam/->consumer on-error)
-                                                                 (sam/->runnable on-complete)
-                                                                 (sam/->consumer on-subscribe)))
+    [mono on-next on-error on-complete on-subscribe]
+    (.subscribe mono
+                (sam/->consumer on-next)
+                (sam/->consumer on-error)
+                (sam/->runnable on-complete)
+                (sam/->consumer on-subscribe)))
   (-subscribe-on [mono scheduler] (.subscribeOn mono scheduler))
   (-subscribe-with [s p] ((.subscribe ^Publisher p ^Subscriber s) s))
   p/DelayOperator
@@ -185,5 +186,5 @@
 (defn ->flux [^Mono mono]
   (.flux mono))
 
-(defn ->promise ^CompletionStage [^Mono mono]
+(defn ->promise ^Future [^Mono mono]
   (.toFuture mono))

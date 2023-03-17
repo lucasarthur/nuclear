@@ -1,5 +1,5 @@
-(ns reactor-core.sink.many
-  (:require [reactor-core.sink.protocols :as p])
+(ns nuke.sink.many
+  (:require [nuke.sink.protocols :as p])
   (:import (reactor.core.publisher Sinks$Many)))
 
 (extend-type Sinks$Many

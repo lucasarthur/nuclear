@@ -1,9 +1,11 @@
-(ns reactor-core.sink.operations
+(ns nuke.sink.operations
   (:require
-   [reactor-core.sink.empty]
-   [reactor-core.sink.many]
-   [reactor-core.sink.one]
-   [reactor-core.sink.protocols :as p]))
+   [nuke.sink.flux_sink]
+   [nuke.sink.mono_sink]
+   [nuke.sink.empty]
+   [nuke.sink.many]
+   [nuke.sink.one]
+   [nuke.sink.protocols :as p]))
 
 (defn try-emit-value [value sink]
   (p/-try-emit-value sink value))
@@ -12,7 +14,7 @@
   (p/-try-emit-empty sink))
 
 (defn try-emit-error
-  ([sink] (try-emit-error (Exception.) sink))
+  ([sink] (try-emit-error (ex-info "error" {:cause :unknown}) sink))
   ([error sink] (p/-try-emit-error sink error)))
 
 (defn try-emit-complete [sink]

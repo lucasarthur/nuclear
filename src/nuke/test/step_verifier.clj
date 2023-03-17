@@ -1,7 +1,7 @@
-(ns reactor-core.test.step-verifier
+(ns nuke.test.step-verifier
   (:require
-   [reactor-core.util.sam :as sam]
-   [reactor-core.util.utils :as u])
+   [nuke.util.sam :as sam]
+   [nuke.util :as u])
   (:import
    (reactor.test StepVerifier)
    (org.reactivestreams Publisher)))

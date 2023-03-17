@@ -1,4 +1,4 @@
-(ns reactor-core.adapter.flow
+(ns nuke.adapter.flow
   (:import (reactor.adapter JdkFlowAdapter)))
 
 (defn publisher->flow [publisher]

@@ -1,4 +1,4 @@
-(defproject nuke "0.1.0"
+(defproject nuke "0.1.1"
   :description "A Clojure wrapper for Project Reactor"
   :url "https://github.com/lucasarthur/nuke"
   :license {:name "GNU General Public License v3.0"
@@ -10,4 +10,5 @@
                  [io.reactivex.rxjava2/rxjava "2.2.8"]
                  [io.reactivex.rxjava3/rxjava "3.1.5"]
                  [org.clojure/core.async "1.6.673"]
+                 [manifold "0.3.0"]
                  [com.spikhalskiy.futurity/futurity-core "0.3-RC3"]])

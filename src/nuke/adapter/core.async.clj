@@ -20,27 +20,30 @@
   (:require
    [clojure.core.async :refer [chan <! put! close! go-loop]]
    [nuke.flux :refer [create]]
-   [nuke.operations :refer [subscribe!]]
+   [nuke.operations :as rx :refer [subscribe!]]
    [nuke.sink.operations :refer [try-emit-value try-emit-error try-emit-complete]]))
 
 (defn publisher->channel
   ([publisher] (publisher->channel (chan) publisher))
   ([ch publisher]
-   (subscribe!
-    #(put! ch {:next %})
-    #(do (put! ch {:error %}) (close! ch))
-    #(do (put! ch :complete) (close! ch))
-    publisher)
+   (->> (rx/on-error! (fn [_] (close! ch)) publisher)
+        (rx/on-complete! #(close! ch))
+        (subscribe!
+         #(put! ch {:next %})
+         #(put! ch {:error %})
+         #(put! ch :complete)))
    ch))
 
 (defn channel->publisher [ch]
-  (create
-   #(go-loop []
-      (if-let [x (<! ch)]
-        (cond
-          (= x :complete) (do (close! ch) (try-emit-complete %))
-          (contains? x :next) (try-emit-value (:next x) %)
-          (contains? x :error) (do (close! ch) (try-emit-error (:error x) %))
-          :else :invalid)
-        (try-emit-complete %))
-      (recur))))
+  (->> (create
+        #(go-loop []
+           (if-let [x (<! ch)]
+             (cond
+               (= x :complete) (try-emit-complete %)
+               (contains? x :next) (try-emit-value (:next x) %)
+               (contains? x :error) (try-emit-error (:error x) %)
+               :else (try-emit-value x %))
+             (try-emit-complete %))
+           (recur)))
+       (rx/on-error! (fn [_] (close! ch)))
+       (rx/on-complete! #(close! ch))))

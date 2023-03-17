@@ -1,5 +1,5 @@
-(ns reactor-core.adapter.rx2
-  (:require [reactor-core.util.utils :refer [keyword->enum]])
+(ns nuke.adapter.rx2
+  (:require [nuke.util :refer [keyword->enum]])
   (:import
    (reactor.adapter.rxjava RxJava2Adapter)
    (io.reactivex BackpressureStrategy)))

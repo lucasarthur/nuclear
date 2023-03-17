@@ -1,4 +1,4 @@
-(ns reactor-core.protocols)
+(ns nuke.protocols)
 
 (defprotocol MapOperator
   (-map [publisher transformer]))

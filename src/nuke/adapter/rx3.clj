@@ -1,7 +1,7 @@
-(ns reactor-core.adapter.rx3
+(ns nuke.adapter.rx3
   (:require
-   [reactor-core.util.utils :refer [keyword->enum]]
-   [reactor-core.util.sam :refer [->consumer]])
+   [nuke.util :refer [keyword->enum]]
+   [nuke.util.sam :refer [->consumer]])
   (:import
    (reactor.adapter.rxjava RxJava3Adapter)
    (io.reactivex BackpressureStrategy)))

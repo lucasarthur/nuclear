@@ -1,4 +1,4 @@
-(ns reactor-core.util.utils
+(ns nuke.util
   (:refer-clojure :exclude [replace])
   (:require [clojure.string :refer [replace upper-case]])
   (:import (java.time Duration Instant)))
@@ -13,14 +13,12 @@
   (if (instance? Duration d) d (Duration/ofMillis d)))
 
 (defn delay->duration ^Duration [delay]
-  (cond
-    (inst? delay) (Duration/ofMillis (inst->delay delay))
-    :else (ms->duration delay)))
+  (if (inst? delay)
+    (Duration/ofMillis (inst->delay delay))
+    (ms->duration delay)))
 
 (defn keyword->str [keyword]
-  (-> (str keyword)
-      (replace ":" "")
-      (upper-case)))
+  (-> (str keyword) (replace ":" "") (upper-case)))
 
 (defn keyword->enum [type keyword]
   (Enum/valueOf type (keyword->str keyword)))

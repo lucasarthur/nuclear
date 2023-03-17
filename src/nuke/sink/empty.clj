@@ -1,6 +1,6 @@
-(ns reactor-core.sink.empty
+(ns nuke.sink.empty
   (:refer-clojure :exclude [empty])
-  (:require [reactor-core.sink.protocols :as p])
+  (:require [nuke.sink.protocols :as p])
   (:import (reactor.core.publisher Sinks$Empty)))
 
 (extend-type Sinks$Empty

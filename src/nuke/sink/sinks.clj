@@ -1,6 +1,6 @@
-(ns reactor-core.sink.sinks
+(ns nuke.sink.sinks
   (:refer-clojure :exclude [empty])
-  (:require [reactor-core.util.utils :refer [ms->duration]])
+  (:require [nuke.util :refer [ms->duration]])
   (:import
    (reactor.core.publisher Sinks)
    (java.time Duration)))

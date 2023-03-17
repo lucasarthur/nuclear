@@ -1,7 +1,7 @@
-(ns reactor-core.reducers
+(ns nuke.reducers
   (:refer-clojure :exclude [reduce])
   (:require 
-   [reactor-core.operations :refer [reduce]]
+   [nuke.operations :refer [reduce]]
    [clojure.core.protocols :refer [CollReduce]])
   (:import (reactor.core.publisher Flux)))
 

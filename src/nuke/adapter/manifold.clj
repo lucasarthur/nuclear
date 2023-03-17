@@ -44,10 +44,9 @@
               (consume-async
                #(cond
                   (= % :complete) (try-emit-complete sink)
-                  (not (map? %)) (try-emit-value % sink)
                   (contains? % :next) (try-emit-value (:next %) sink)
                   (contains? % :error) (try-emit-error (:error %) sink)
-                  :else :invalid)
+                  :else (try-emit-value % sink))
                s)))))
        (rx/on-error! (fn [_] (close! s)))
        (rx/on-complete! #(close! s))))

@@ -1,4 +1,4 @@
-(defproject nuke "0.1.0"
+(defproject nuke "0.1.1"
   :description "A Clojure wrapper for Project Reactor"
   :url "https://github.com/lucasarthur/nuke"
   :license {:name "GNU General Public License v3.0"

@@ -1,6 +1,6 @@
-(defproject nuke "0.1.1"
+(defproject nuclear "0.1.2"
   :description "A Clojure wrapper for Project Reactor"
-  :url "https://github.com/lucasarthur/nuke"
+  :url "https://github.com/lucasarthur/nuclear"
   :license {:name "GNU General Public License v3.0"
             :url "https://www.gnu.org/licenses/gpl-3.0.pt-br.html"}
   :dependencies [[org.clojure/clojure "1.11.1"]

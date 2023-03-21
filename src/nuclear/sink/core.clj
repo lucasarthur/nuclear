@@ -16,7 +16,7 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with Nuclear. If not, see <http://www.gnu.org/licenses/>.
 
-(ns nuclear.sink.operations
+(ns nuclear.sink.core
   (:require
    [nuclear.sink.flux_sink]
    [nuclear.sink.mono_sink]
@@ -25,6 +25,10 @@
    [nuclear.sink.one]
    [nuclear.sink.protocols :as p]))
 
+(def ^:private default-error
+  (ex-info "error" {:cause :unknown
+                    :type :sink-error}))
+
 (defn try-emit-value [value sink]
   (p/-try-emit-value sink value))
 
@@ -32,7 +36,7 @@
   (p/-try-emit-empty sink))
 
 (defn try-emit-error
-  ([sink] (try-emit-error (ex-info "error" {:cause :unknown}) sink))
+  ([sink] (try-emit-error default-error sink))
   ([error sink] (p/-try-emit-error sink error)))
 
 (defn try-emit-complete [sink]

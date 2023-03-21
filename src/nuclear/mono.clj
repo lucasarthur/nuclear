@@ -55,15 +55,17 @@
 (derive Mono ::mono)
 (derive Flux ::flux)
 
-(defmulti from ^Mono #(if (future? %) ::promise (type %)))
+(defmulti from ^Mono #(cond
+                        (future? %) ::promise
+                        (fn? %) ::supplier
+                        :else (type %)))
+
 (defmethod from ::publisher [p] (Mono/from p))
 (defmethod from ::promise [^Future p] (-> p Futurity/shift Mono/fromFuture))
+(defmethod from ::supplier [f] (-> f sam/->supplier Mono/fromSupplier))
 
 (defn from-runnable [runnable]
   (Mono/fromRunnable (sam/->runnable runnable)))
-
-(defn from-supplier [supplier]
-  (Mono/fromSupplier (sam/->supplier supplier)))
 
 (defn ignoring-elements [source]
   (Mono/ignoreElements ^Publisher source))

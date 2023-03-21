@@ -103,12 +103,6 @@
      (array? sources) (Flux/zip (sam/->function f) ^int prefetch ^"[Lorg.reactivestreams.Publisher;" (to-array sources))
      :else (Flux/zip ^Iterable sources ^int prefetch (sam/->function f)))))
 
-(defn- from-dispatcher [x]
-  (cond
-    (array? x) ::array
-    (instance? Iterable x) ::iterable
-    :else (type x)))
-
 (derive Iterable ::iterable)
 (derive Stream ::stream)
 (derive Publisher ::publisher)
@@ -117,7 +111,11 @@
 (derive Mono ::mono)
 (derive Flux ::flux)
 
-(defmulti from ^Flux from-dispatcher)
+(defmulti from ^Flux #(cond
+                        (array? %) ::array
+                        (instance? Iterable %) ::iterable
+                        :else (type %)))
+
 (defmethod from ::iterable [i] (Flux/fromIterable i))
 (defmethod from ::stream [s] (Flux/fromStream ^Stream s))
 (defmethod from ::array [a] (Flux/fromArray a))

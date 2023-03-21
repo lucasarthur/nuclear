@@ -21,7 +21,7 @@
    [manifold.stream :as s :refer [on-drained consume-async stream put! close! closed?]]
    [nuclear.flux :refer [create]]
    [nuclear.core :as rx :refer [subscribe!]]
-   [nuclear.sink.operations :refer [try-emit-value try-emit-error try-emit-complete]]))
+   [nuclear.sink.core :refer [try-emit-value try-emit-error try-emit-complete]]))
 
 (defn publisher->stream
   ([publisher] (publisher->stream (stream) publisher))

@@ -16,7 +16,7 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with Nuclear. If not, see <http://www.gnu.org/licenses/>.
 
-(ns nuclear.operations
+(ns nuclear.core
   (:refer-clojure :exclude [reduce distinct next count repeat merge-with filter map mapcat take take-last take-while])
   (:require
    [nuclear.flux]

@@ -18,12 +18,14 @@
 
 (ns nuclear.util
   (:refer-clojure :exclude [replace])
-  (:require [clojure.string :refer [replace upper-case]])
+  (:require
+   [clojure.string :refer [replace upper-case]])
   (:import
-   [java.time Duration Instant]
-   [clojure.lang Reflector]))
+   (java.time Duration Instant)
+   (clojure.lang Reflector)))
 
-(defn array? ^Boolean [x] (.isArray (class x)))
+(defn array? ^Boolean [x]
+  (.isArray (class x)))
 
 (defn inst->delay [x]
   (-> (Instant/ofEpochMilli x)

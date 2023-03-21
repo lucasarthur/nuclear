@@ -18,7 +18,17 @@
 
 (ns nuclear.util.sam
   (:import
-   (java.util.function Consumer BiFunction Predicate Function LongFunction BiPredicate LongConsumer Supplier BooleanSupplier BiConsumer)))
+   (java.util.function
+    Consumer
+    BiFunction
+    Predicate
+    Function
+    LongFunction
+    BiPredicate
+    LongConsumer
+    Supplier
+    BooleanSupplier
+    BiConsumer)))
 
 (defn- nil-or-sam? [f type] (or (nil? f) (instance? type f)))
 

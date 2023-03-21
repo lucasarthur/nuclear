@@ -19,7 +19,7 @@
 (ns nuclear.reducers
   (:refer-clojure :exclude [reduce])
   (:require 
-   [nuclear.operations :refer [reduce]]
+   [nuclear.core :refer [reduce]]
    [clojure.core.protocols :refer [CollReduce]])
   (:import (reactor.core.publisher Flux)))
 

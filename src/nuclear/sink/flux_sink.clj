@@ -17,8 +17,10 @@
 ;; along with Nuclear. If not, see <http://www.gnu.org/licenses/>.
 
 (ns nuclear.sink.flux-sink
-  (:require [nuclear.sink.protocols :as p])
-  (:import [reactor.core.publisher FluxSink]))
+  (:require
+   [nuclear.sink.protocols :as p])
+  (:import
+   (reactor.core.publisher FluxSink)))
 
 (extend-type FluxSink
   p/EmitOperator

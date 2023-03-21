@@ -17,7 +17,8 @@
 ;; along with Nuclear. If not, see <http://www.gnu.org/licenses/>.
 
 (ns nuclear.util.schedulers
-  (:import (reactor.core.scheduler Schedulers)))
+  (:import
+   (reactor.core.scheduler Schedulers)))
 
 (def bounded-elastic (Schedulers/boundedElastic))
 (def parallel (Schedulers/parallel))

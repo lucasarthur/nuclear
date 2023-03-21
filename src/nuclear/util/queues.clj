@@ -18,7 +18,8 @@
 
 (ns nuclear.util.queues
   (:refer-clojure :exclude [empty])
-  (:import (reactor.util.concurrent Queues)))
+  (:import
+   (reactor.util.concurrent Queues)))
 
 (def empty (-> (Queues/empty) .get))
 (def one (-> (Queues/one) .get))

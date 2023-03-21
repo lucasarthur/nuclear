@@ -17,8 +17,10 @@
 ;; along with Nuclear. If not, see <http://www.gnu.org/licenses/>.
 
 (ns nuclear.sink.many
-  (:require [nuclear.sink.protocols :as p])
-  (:import (reactor.core.publisher Sinks$Many)))
+  (:require
+   [nuclear.sink.protocols :as p])
+  (:import
+   (reactor.core.publisher Sinks$Many)))
 
 (extend-type Sinks$Many
   p/EmitOperator

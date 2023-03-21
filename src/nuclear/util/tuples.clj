@@ -21,7 +21,8 @@
   (:require
    [nuclear.util :refer [str-invoke]]
    [nuclear.util.sam :refer [->function]])
-  (:import [reactor.util.function Tuples]))
+  (:import
+   (reactor.util.function Tuples)))
 
 (defn ->tuple [values]
   (Tuples/fromArray (to-array values)))

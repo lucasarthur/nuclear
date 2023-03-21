@@ -17,14 +17,23 @@
 ;; along with Nuclear. If not, see <http://www.gnu.org/licenses/>.
 
 (ns nuclear.util.tuples
-  (:refer-clojure :exclude [get])
-  (:import (reactor.util.function Tuples)))
+  (:refer-clojure :exclude [get map])
+  (:require
+   [nuclear.util :refer [str-invoke]]
+   [nuclear.util.sam :refer [->function]])
+  (:import [reactor.util.function Tuples]))
 
 (defn ->tuple [values]
   (Tuples/fromArray (to-array values)))
 
 (defn get [n tuple]
   (.get tuple n))
+
+(defn size [tuple]
+  (.size tuple))
+
+(defn map [n f tuple]
+  (->> f ->function (str-invoke tuple (str "mapT" n))))
 
 (defn ->seq [tuple]
   (iterator-seq (.iterator tuple)))

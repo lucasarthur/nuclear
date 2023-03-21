@@ -19,7 +19,9 @@
 (ns nuclear.util
   (:refer-clojure :exclude [replace])
   (:require [clojure.string :refer [replace upper-case]])
-  (:import (java.time Duration Instant)))
+  (:import
+   [java.time Duration Instant]
+   [clojure.lang Reflector]))
 
 (defn array? ^Boolean [x] (.isArray (class x)))
 
@@ -40,3 +42,6 @@
 
 (defn keyword->enum [type keyword]
   (Enum/valueOf type (keyword->str keyword)))
+
+(defn str-invoke [instance method-str & args]
+  (Reflector/invokeInstanceMethod instance method-str (to-array args)))

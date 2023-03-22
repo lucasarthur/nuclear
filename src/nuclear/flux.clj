@@ -203,8 +203,7 @@
   (-finally! [flux consumer] (.doFinally flux (sam/->consumer consumer)))
 
   p/SubscribeOperator
-  (-subscribe
-    [flux on-next on-error on-complete on-subscribe]
+  (-subscribe [flux on-next on-error on-complete on-subscribe]
     (.subscribe flux
                 (sam/->consumer on-next)
                 (sam/->consumer on-error)
@@ -250,8 +249,8 @@
     ([flux] (.onErrorComplete flux))
     ([flux of-type?] (.onErrorComplete flux (sam/->predicate of-type?))))
   (-on-error-continue
-    ([flux handler] (.onErrorContinue flux (sam/->bi-consumer handler)))
-    ([flux handler of-type?] (.onErrorContinue flux (sam/->predicate of-type?) (sam/->bi-consumer handler))))
+    ([flux consumer] (.onErrorContinue flux (sam/->bi-consumer consumer)))
+    ([flux consumer of-type?] (.onErrorContinue flux (sam/->predicate of-type?) (sam/->bi-consumer consumer))))
   (-on-error-stop [flux] (.onErrorStop flux))
   (-on-error-resume
     ([flux handler] (.onErrorResume flux (sam/->function handler)))

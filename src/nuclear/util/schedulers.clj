@@ -20,6 +20,10 @@
   (:import
    (reactor.core.scheduler Schedulers)))
 
+(def default-pool-size (Schedulers/DEFAULT_POOL_SIZE))
+(def default-bounded-elastic-size (Schedulers/DEFAULT_BOUNDED_ELASTIC_SIZE))
+(def default-bounded-elastic-queue-size (Schedulers/DEFAULT_BOUNDED_ELASTIC_QUEUESIZE))
+
 (def bounded-elastic (Schedulers/boundedElastic))
 (def parallel (Schedulers/parallel))
 (def immediate (Schedulers/immediate))

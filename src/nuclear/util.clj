@@ -19,10 +19,16 @@
 (ns nuclear.util
   (:refer-clojure :exclude [replace])
   (:require
-   [clojure.string :refer [replace upper-case]])
+   [clojure.string :refer [replace upper-case lower-case]])
   (:import
    (java.time Duration Instant)
    (clojure.lang Reflector)))
+
+(defn- class-name->kebab [s]
+  (-> s (replace #"(?<!^)[A-Z]" #(str "-" %)) lower-case))
+
+(defn- throwable->kw-type [t]
+  (-> t .getClass .getSimpleName class-name->kebab keyword))
 
 (defn array? ^Boolean [x]
   (.isArray (class x)))
@@ -47,3 +53,10 @@
 
 (defn str-invoke [instance method-str & args]
   (Reflector/invokeInstanceMethod instance method-str (to-array args)))
+
+(defn error-of-type? [type e]
+  (if-let [data (ex-data e)]
+    (= type (:type data))
+    (if (instance? Throwable e)
+      (= type (throwable->kw-type e))
+      false)))

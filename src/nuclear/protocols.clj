@@ -18,45 +18,62 @@
 
 (ns nuclear.protocols)
 
-(defprotocol MapOperator
-  (-map [publisher transformer]))
-
-(defprotocol FlatMapOperator
+(defprotocol TransformOperator
+  (-transform [publisher transformer])
+  (-as [publisher transformer])
+  (-map [publisher transformer])
   (-flat-map [publisher transformer])
-  (-concat-map [publisher transformer] [publisher transformer prefetch])
   (-flat-map-iterable [publisher transformer])
   (-flat-map-sequential [publisher transformer])
-  (-flat-map-many [publisher transformer]))
+  (-flat-map-many [publisher transformer])
+  (-concat-map [publisher transformer] [publisher transformer prefetch])
+  (-reduce [publisher reducer] [publisher initial reducer])
+  (-filter [publisher predicate])
+  (-filter-when [publisher async-predicate]))
 
-(defprotocol HandleOperator
-  (-handle [publisher handler]))
+(defprotocol WindowOperator                  ;; mono todo
+  (-window [publisher max-size skip])
+  (-window-duration
+    [publisher duration scheduler]
+    [publisher duration every scheduler])
+  (-window-timeout
+    [publisher max-size max-time scheduler fair-backpressure?])
+  (-window-until [publisher predicate cut-before?])
+  (-window-until-changed [publisher key-selector key-comparator])
+  (-window-while [publisher predicate]))
 
 (defprotocol ConcatOperator
   (-concat-with [publisher other])
-  (-concat-values [publisher values]))
+  (-concat-values [publisher values])
+  (-start-with [publisher values])) ;; mono todo
+
+(defprotocol MergeOperator
+  (-merge-with [publisher other]))
+
+(defprotocol HandleOperator
+  (-handle [publisher handler]))
 
 (defprotocol NextOperator
   (-next [publisher]))
 
 (defprotocol ParallelOperator
-  (-parallel [publisher]))
+  (-parallel [publisher parallelism prefetch]))
 
 (defprotocol ReplayOperator
-  (-replay [publisher]))
+  (-replay [publisher max-items ttl scheduler]))
 
 (defprotocol DistinctOperator
-  (-distinct [publisher key-extractor]))
+  (-distinct [publisher key-selector])
+  (-distinct-until-changed [publisher key-selector key-comparator])) ;; todo MONO
 
 (defprotocol BackpressureOperator
-  (-on-backpressure-buffer [publisher]))
+  (-on-backpressure-buffer [publisher] [publisher max-size on-overflow])
+  (-on-backpressure-drop [publisher] [publisher on-dropped]) ;; todo MONO
+  (-on-backpressure-error [publisher]) ;; todo mono
+  (-on-backpressure-latest [publisher])) ;; todo mono
 
-(defprotocol ReduceOperator
-  (-reduce [publisher reducer] [publisher initial reducer]))
-
-(defprotocol MergeOperator
-  (-merge-with [publisher other]))
-
-(defprotocol DefaultIfEmptyOperator
+(defprotocol SwitchOperator
+  (-switch-if-empty [publisher alternative])
   (-default-if-empty [publisher default-value]))
 
 (defprotocol DoOnOperator
@@ -76,16 +93,13 @@
   (-on-error-complete [publisher] [publisher of-type?])
   (-on-error-continue [publisher consumer] [publisher consumer of-type?])
   (-on-error-stop [publisher])
-  (-on-error-resume [publisher f] [publisher f of-type?])
+  (-on-error-resume [publisher handler] [publisher handler of-type?])
   (-on-error-return [publisher data] [publisher data of-type?]))
-
-(defprotocol FilterOperator
-  (-filter [publisher predicate])
-  (-filter-when [publisher async-predicate]))
 
 (defprotocol DelayOperator
   (-delay-elements [publisher duration])
-  (-delay-sequence [publisher duration]))
+  (-delay-sequence [publisher duration])
+  (-delay-subscription [publisher duration-or-publisher])) ;; todo MONO
 
 (defprotocol RepeatOperator
   (-repeat [publisher should-repeat? max-times]))
@@ -93,11 +107,15 @@
 (defprotocol CountOperator
   (-count [publisher]))
 
+(defprotocol IndexOperator ;; mono todo
+  (-index [publisher mapper]))
+
 (defprotocol HasElementOperator
   (-has-elements? [publisher])
   (-has-element? [publisher data]))
 
 (defprotocol CollectOperator
+  (-collect [publisher container collector])
   (-collect-list [publisher])
   (-collect-map [publisher key-extractor value-extractor]))
 
@@ -108,7 +126,7 @@
 (defprotocol BufferOperator
   (-buffer [publisher max-size skip])
   (-buffer-timeout [publisher max-size duration])
-  (-buffer-until [publisher predicate])
+  (-buffer-until [publisher predicate cut-before?])
   (-buffer-while [publisher predicate]))
 
 (defprotocol SingleOperator
@@ -117,9 +135,6 @@
 
 (defprotocol RetryOperator
   (-retry [publisher max-retries]))
-
-(defprotocol SwitchOperator
-  (-switch-if-empty [publisher alternative]))
 
 (defprotocol CacheOperator
   (-cache [publisher ttl max-items]))
@@ -130,28 +145,35 @@
   (-then-empty [publisher other])
   (-then-many [publisher other]))
 
-(defprotocol TransformOperator
-  (-transform [publisher transformer])
-  (-as [publisher transformer]))
-
 (defprotocol ShareOperator
   (-share [publisher])
   (-share-next [publisher]))
 
-(defprotocol IgnoreElementsOperator
+(defprotocol IgnoreOperator
   (-ignore-elements [publisher]))
 
-(defprotocol SkipOperator
-  (-skip [publisher n]))
+(defprotocol BlockOperator ;; mono todo
+  (-block [publisher] [publisher timeout])
+  (-block-first [publisher] [publisher timeout])
+  (-block-last [publisher] [publisher timeout]))
 
-(defprotocol SkipLastOperator
+(defprotocol TimingOperator ;; mono todo
+  (-elapsed [publisher scheduler])
+  (-timed [publisher scheduler])
+  (-timestamp [publisher scheduler]))
+
+(defprotocol SkipOperator
+  (-skip [publisher n])
+  (-skip-duration [publisher duration])
+  (-skip-until [publisher predicate])
+  (-skip-while [publisher predicate])
   (-skip-last [publisher n]))
 
 (defprotocol TakeOperator
-  (-take [publisher n]))
-
-(defprotocol TakeLastOperator
-  (-take-last [publisher n]))
+  (-take [publisher n])
+  (-take-last [publisher n])
+  (-take-until [publisher predicate])
+  (-take-while [publisher predicate]))
 
 (defprotocol ZipOperator
   (-zip-with
@@ -164,17 +186,13 @@
 (defprotocol HideOperator
   (-hide [publisher]))
 
-(defprotocol TakeUntilOperator
-  (-take-until [publisher other]))
-
-(defprotocol TakeWhileOperator
-  (-take-while [publisher predicate]))
-
 (defprotocol SubscribeOperator
   (-subscribe [publisher on-next on-error on-complete on-subscribe])
   (-subscribe-on [publisher scheduler])
   (-subscribe-with [subscriber publisher]))
 
 (defprotocol PublishOperator
-  (-publish [publisher transformer])
-  (-publish-on [publisher scheduler]))
+  (-publish
+    [publisher prefetch]
+    [publisher transformer prefetch])
+  (-publish-on [publisher scheduler prefetch]))

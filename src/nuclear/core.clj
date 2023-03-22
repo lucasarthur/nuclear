@@ -21,16 +21,28 @@
   (:require
    [nuclear.flux]
    [nuclear.mono]
+   [nuclear.util.schedulers :as schedulers]
+   [nuclear.util.queues :as queues]
+   [nuclear.util.tuples :refer [->tuple]]
    [nuclear.protocols :as p]))
 
 (defn filter [predicate publisher]
   (p/-filter publisher predicate))
 
-(defn filter-when [f publisher]
-  (p/-filter-when publisher f))
+(defn filter-when [predicate publisher]
+  (p/-filter-when publisher predicate))
 
 (defn skip [n publisher]
   (p/-skip publisher n))
+
+(defn skip-duration [duration publisher]
+  (p/-skip-duration publisher duration))
+
+(defn skip-until [predicate publisher]
+  (p/-skip-until publisher predicate))
+
+(defn skip-while [predicate publisher]
+  (p/-skip-while publisher predicate))
 
 (defn skip-last [n publisher]
   (p/-skip-last publisher n))
@@ -41,8 +53,8 @@
 (defn take-last [n publisher]
   (p/-take-last publisher n))
 
-(defn take-while [f publisher]
-  (p/-take-while publisher f))
+(defn take-while [predicate publisher]
+  (p/-take-while publisher predicate))
 
 (defn delay-elements [duration publisher]
   (p/-delay-elements publisher duration))
@@ -50,12 +62,27 @@
 (defn delay-sequence [duration publisher]
   (p/-delay-sequence publisher duration))
 
-(defn map [f publisher]
-  (p/-map publisher f))
+(defn delay-subscription [duration-or-publisher publisher]
+  (p/-delay-subscription publisher duration-or-publisher))
+
+(defn block
+  ([publisher] (p/-block publisher))
+  ([timeout publisher] (p/-block publisher timeout)))
+
+(defn block-first
+  ([publisher] (p/-block-first publisher))
+  ([timeout publisher] (p/-block-first publisher timeout)))
+
+(defn block-last
+  ([publisher] (p/-block-last publisher))
+  ([timeout publisher] (p/-block-last publisher timeout)))
+
+(defn map [mapper publisher]
+  (p/-map publisher mapper))
 
 (defn mapcat
-  ([f publisher] (p/-concat-map publisher f))
-  ([f prefetch publisher] (p/-concat-map publisher f prefetch)))
+  ([mapper publisher] (p/-concat-map publisher mapper))
+  ([mapper prefetch publisher] (p/-concat-map publisher mapper prefetch)))
 
 (defn handle [handler publisher]
   (p/-handle publisher handler))
@@ -70,26 +97,29 @@
 (defn concat-with [other publisher]
   (p/-concat-with publisher other))
 
+(defn start-with [values publisher]
+  (p/-start-with publisher values))
+
 (defn merge-with [other publisher]
   (p/-merge-with publisher other))
 
-(defn flat-map [f publisher]
-  (p/-flat-map publisher f))
+(defn flat-map [mapper publisher]
+  (p/-flat-map publisher mapper))
 
-(defn flat-map-iterable [f publisher]
-  (p/-flat-map-iterable publisher f))
+(defn flat-map-iterable [mapper publisher]
+  (p/-flat-map-iterable publisher mapper))
 
-(defn flat-map-sequential [f publisher]
-  (p/-flat-map-sequential publisher f))
+(defn flat-map-sequential [mapper publisher]
+  (p/-flat-map-sequential publisher mapper))
 
-(defn flat-map-many [f publisher]
-  (p/-flat-map-many publisher f))
+(defn flat-map-many [mapper publisher]
+  (p/-flat-map-many publisher mapper))
 
 (defn hide [publisher]
   (p/-hide publisher))
 
-(defn take-until [other publisher]
-  (p/-take-until publisher other))
+(defn take-until [predicate publisher]
+  (p/-take-until publisher predicate))
 
 (defn default-if-empty [default-value publisher]
   (p/-default-if-empty publisher default-value))
@@ -105,11 +135,22 @@
 (defn next [publisher]
   (p/-next publisher))
 
-(defn parallel [publisher]
-  (p/-parallel publisher))
+(defn parallel
+  ([publisher]
+   (parallel schedulers/default-pool-size publisher))
+  ([parallelism publisher]
+   (parallel parallelism queues/small-buffer-size publisher))
+  ([parallelism prefetch publisher]
+   (p/-parallel publisher parallelism prefetch)))
 
-(defn replay [publisher]
-  (p/-replay publisher))
+(defn replay
+  ([publisher] (replay Integer/MAX_VALUE publisher))
+  ([max-items publisher]
+   (replay max-items 0 publisher))
+  ([max-items ttl publisher]
+   (replay max-items ttl schedulers/parallel publisher))
+  ([max-items ttl scheduler publisher]
+   (p/-replay publisher max-items ttl scheduler)))
 
 (defn retry
   ([publisher] (retry Long/MAX_VALUE publisher))
@@ -121,8 +162,25 @@
 (defn share-next [publisher]
   (p/-share-next publisher))
 
-(defn on-backpressure-buffer [publisher]
-  (p/-on-backpressure-buffer publisher))
+(defn on-backpressure-buffer
+  ([publisher]
+   (p/-on-backpressure-buffer publisher))
+  ([max-size publisher]
+   (on-backpressure-buffer max-size nil publisher))
+  ([max-size overflow-consumer publisher]
+   (p/-on-backpressure-buffer publisher max-size overflow-consumer)))
+
+(defn on-backpressure-drop
+  ([publisher]
+   (p/-on-backpressure-drop publisher))
+  ([on-dropped publisher]
+   (p/-on-backpressure-drop publisher on-dropped)))
+
+(defn on-backpressure-error [publisher]
+  (p/-on-backpressure-error publisher))
+
+(defn on-backpressure-latest [publisher]
+  (p/-on-backpressure-latest publisher))
 
 (defn switch-if-empty [alternative publisher]
   (p/-switch-if-empty publisher alternative))
@@ -140,14 +198,21 @@
 (defn buffer-timeout [max-size duration publisher]
   (p/-buffer-timeout publisher max-size duration))
 
-(defn buffer-until [predicate publisher]
-  (p/-buffer-until publisher predicate))
+(defn buffer-until
+  ([predicate publisher]
+   (buffer-until predicate false publisher))
+  ([predicate cut-before? publisher]
+   (p/-buffer-until publisher predicate cut-before?)))
 
 (defn buffer-while [predicate publisher]
   (p/-buffer-while publisher predicate))
 
 (defn count [publisher]
   (p/-count publisher))
+
+(defn index
+  ([publisher] (index #(->tuple [%1 %2]) publisher))
+  ([index-mapper publisher] (p/-index publisher index-mapper)))
 
 (defn then
   ([publisher] (p/-then publisher))
@@ -172,6 +237,12 @@
   ([publisher] (distinct identity publisher))
   ([key-fn publisher] (p/-distinct publisher key-fn)))
 
+(defn distinct-until-changed
+  ([publisher] (distinct-until-changed identity publisher))
+  ([key-fn publisher] (distinct-until-changed key-fn = publisher))
+  ([key-fn key-comparator publisher]
+   (p/-distinct-until-changed publisher key-fn key-comparator)))
+
 (defn single
   ([publisher] (p/-single publisher))
   ([default publisher] (p/-single publisher default)))
@@ -190,6 +261,9 @@
 
 (defn any-match? [predicate publisher]
   (p/-any-match? publisher predicate))
+
+(defn collect [container collector publisher]
+  (p/-collect publisher container collector))
 
 (defn collect-list [publisher]
   (p/-collect-list publisher))
@@ -237,15 +311,15 @@
   ([of-type? publisher] (p/-on-error-complete publisher of-type?)))
 
 (defn on-error-continue
-  ([f publisher] (p/-on-error-continue publisher f))
-  ([of-type? f publisher] (p/-on-error-continue publisher f of-type?)))
+  ([handler publisher] (p/-on-error-continue publisher handler))
+  ([of-type? handler publisher] (p/-on-error-continue publisher handler of-type?)))
 
 (defn on-error-stop [publisher]
   (p/-on-error-stop publisher))
 
 (defn on-error-resume
-  ([f publisher] (p/-on-error-resume publisher f))
-  ([of-type? f publisher] (p/-on-error-resume publisher f of-type?)))
+  ([handler publisher] (p/-on-error-resume publisher handler))
+  ([of-type? handler publisher] (p/-on-error-resume publisher handler of-type?)))
 
 (defn on-error-return
   ([data publisher] (p/-on-error-return publisher data))
@@ -253,7 +327,7 @@
 
 (defn zip-with
   ([other publisher] (p/-zip-with publisher other))
-  ([f other publisher] (p/-zip-with publisher other f)))
+  ([combinator other publisher] (p/-zip-with publisher other combinator)))
 
 (defn zip-when
   ([f publisher] (p/-zip-when publisher f))
@@ -273,11 +347,77 @@
   (p/-subscribe-with subscriber publisher))
 
 (defn publish!
-  ([publisher] (publish! identity publisher))
-  ([transformer publisher] (p/-publish publisher transformer)))
+  ([publisher] (publish! queues/small-buffer-size publisher))
+  ([prefetch publisher] (p/-publish publisher prefetch)))
 
-(defn publish-on [scheduler publisher]
-  (p/-publish-on publisher scheduler))
+(defn transform-and-publish!
+  ([transformer publisher]
+   (transform-and-publish! transformer queues/small-buffer-size publisher))
+  ([transformer prefetch publisher]
+   (p/-publish publisher transformer prefetch)))
+
+(defn publish-on
+  ([scheduler publisher]
+   (publish-on scheduler queues/small-buffer-size publisher))
+  ([scheduler prefetch publisher]
+   (p/-publish-on publisher scheduler prefetch)))
+
+(defn elapsed
+  ([publisher] (elapsed schedulers/parallel publisher))
+  ([scheduler publisher] (p/-elapsed publisher scheduler)))
+
+(defn timed
+  ([publisher] (timed schedulers/parallel publisher))
+  ([clock publisher] (p/-timed publisher clock)))
+
+(defn timestamp
+  ([publisher] (timestamp schedulers/parallel publisher))
+  ([scheduler publisher] (p/-timestamp publisher scheduler)))
+
+(defn window
+  ([max-size publisher] (window max-size 0 publisher))
+  ([max-size skip publisher] (p/-window publisher max-size skip)))
+
+(defn window-duration
+  ([duration publisher]
+   (window-duration duration schedulers/parallel publisher))
+  ([duration timer publisher]
+   (p/-window-duration publisher duration timer)))
+
+(defn window-every
+  ([duration every publisher]
+   (window-every duration every schedulers/parallel publisher))
+  ([duration every timer publisher]
+   (p/-window-duration publisher duration every timer)))
+
+(defn window-timeout
+  ([max-size max-time publisher]
+   (window-timeout max-size max-time schedulers/parallel publisher))
+  ([max-size max-time timer publisher]
+   (window-timeout max-size max-time timer false publisher))
+  ([max-size max-time timer fair-backpressure? publisher]
+   (p/-window-timeout publisher max-size max-time timer fair-backpressure?)))
+
+(defn window-until
+  ([predicate publisher]
+   (window-until predicate false publisher))
+  ([predicate cut-before? publisher]
+   (p/-window-until publisher predicate cut-before?)))
+
+(defn window-until-changed
+  ([publisher] (window-until-changed identity publisher))
+  ([key-fn publisher] (window-until-changed key-fn = publisher))
+  ([key-fn key-comparator publisher]
+   (p/-window-until-changed publisher key-fn key-comparator)))
+
+(defn window-while [predicate publisher]
+  (p/-window-while publisher predicate))
 
 (defn log [publisher]
   (.log publisher))
+
+(defn dispose! [disposable]
+  (.dispose disposable))
+
+(defn disposed? [disposable]
+  (.isDisposed disposable))

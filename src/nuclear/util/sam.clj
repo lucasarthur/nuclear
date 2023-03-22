@@ -65,5 +65,8 @@
 (defn ->supplier ^Supplier [f]
   (if (nil-or-sam? f Supplier) f (reify Supplier (get [_] (f)))))
 
+(defn value->supplier [value]
+  (->supplier (fn [] value)))
+
 (defn ->boolean-supplier ^BooleanSupplier [f]
   (if (nil-or-sam? f BooleanSupplier) f (reify BooleanSupplier (getAsBoolean [_] (f)))))

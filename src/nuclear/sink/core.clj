@@ -26,8 +26,8 @@
    [nuclear.sink.protocols :as p]))
 
 (def ^:private default-error
-  (ex-info "error" {:cause :unknown
-                    :type :sink-error}))
+  (ex-info "sink error" {:cause :unknown
+                         :type :sink-error}))
 
 (defn try-emit-value [value sink]
   (p/-try-emit-value sink value))

@@ -38,8 +38,16 @@
 (defn never []
   (Flux/never))
 
-(defn error [error-or-fn]
-  (Flux/error (if (fn? error-or-fn) (error-or-fn) error-or-fn)))
+(defn error
+  ([error-or-fn] (error error-or-fn false))
+  ([error-or-fn when-requested?]
+   (Flux/error (if (fn? error-or-fn) (error-or-fn) error-or-fn) when-requested?)))
+
+(defn first-with-signal [sources]
+  (Flux/firstWithSignal ^Iterable sources))
+
+(defn first-with-value [sources]
+  (Flux/firstWithValue ^Iterable sources))
 
 (defn generate
   ([generator] (Flux/generate (sam/->consumer generator)))
@@ -95,13 +103,11 @@
 
 (defn zip
   ([sources f]
-   (cond
-     (= 2 (count sources)) (p/-zip-with (first sources) (second sources) f)
-     :else (Flux/zip ^Iterable sources (sam/->function f))))
+   (if (= 2 (count sources))
+     (p/-zip-with (first sources) (second sources) f)
+     (Flux/zip ^Iterable sources (sam/->function f))))
   ([sources f prefetch]
-   (cond
-     (array? sources) (Flux/zip (sam/->function f) ^int prefetch ^"[Lorg.reactivestreams.Publisher;" (to-array sources))
-     :else (Flux/zip ^Iterable sources ^int prefetch (sam/->function f)))))
+   (Flux/zip ^Iterable sources prefetch (sam/->function f))))
 
 (derive Iterable ::iterable)
 (derive Stream ::stream)
@@ -124,37 +130,45 @@
 (defmethod from ::flux [f] f)
 
 (extend-type Flux
-  p/FlatMapOperator
+  p/TransformOperator
+  (-transform [flux transformer] (.transform flux (sam/->function transformer)))
+  (-as [flux transformer] (.as flux (sam/->function transformer)))
+  (-map [flux f] (.map flux (sam/->function f)))
   (-flat-map [flux f] (.flatMap flux (sam/->function f)))
   (-concat-map
     ([flux f] (.concatMap flux (sam/->function f)))
     ([flux f prefetch] (.concatMap flux (sam/->function f) prefetch)))
   (-flat-map-iterable [flux f] (.flatMapIterable flux (sam/->function f)))
   (-flat-map-sequential [flux f] (.flatMapSequential flux (sam/->function f)))
-  p/MapOperator
-  (-map [flux f] (.map flux (sam/->function f)))
-  p/FilterOperator
   (-filter [flux f] (.filter flux (sam/->predicate f)))
   (-filter-when [flux f] (.filterWhen flux (sam/->function f)))
+  (-reduce
+    ([flux f] (.reduce flux (sam/->bi-function f)))
+    ([flux initial f] (.reduce flux initial (sam/->bi-function f))))
   p/TakeOperator
   (-take [flux n] (.take flux ^long n))
+  (-take-until [flux f] (.takeUntil flux (sam/->predicate f)))
+  (-take-while [flux f] (.takeWhile flux (sam/->predicate f)))
+  (-take-last [flux n] (.takeLast flux n))
   p/SkipOperator
   (-skip [flux n] (.skip flux ^long n))
+  (-skip-duration [flux duration] (.skip flux (ms->duration duration)))
+  (-skip-until [flux pred] (.skipUntil flux (sam/->predicate pred)))
+  (-skip-while [flux pred] (.skipWhile flux (sam/->predicate pred)))
+  (-skip-last [flux n] (.skipLast flux n))
   p/ZipOperator
   (-zip-with
     ([flux other] (.zipWith flux ^Publisher other))
     ([flux other f] (.zipWith flux ^Publisher other (sam/->bi-function f))))
   p/HideOperator
   (-hide [flux] (.hide flux))
-  p/TakeUntilOperator
-  (-take-until [flux other] (.takeUntilOther flux ^Publisher other))
-  p/TakeWhileOperator
-  (-take-while [flux f] (.takeWhile flux (sam/->predicate f)))
   p/ConcatOperator
   (-concat-values [flux values] (.concatWithValues flux (into-array values)))
   (-concat-with [flux other] (.concatWith flux ^Publisher other))
-  p/DefaultIfEmptyOperator
+  (-start-with [flux values] (.startWith flux ^Iterable values))
+  p/SwitchOperator
   (-default-if-empty [flux default-value] (.defaultIfEmpty flux default-value))
+  (-switch-if-empty [flux alternative] (.switchIfEmpty flux alternative))
   p/DoOnOperator
   (-on-complete! [flux f] (.doOnComplete flux (sam/->runnable f)))
   (-after-terminate! [flux f] (.doAfterTerminate flux (sam/->runnable f)))
@@ -179,9 +193,33 @@
                 (sam/->consumer on-subscribe)))
   (-subscribe-on [flux scheduler] (.subscribeOn flux scheduler))
   (-subscribe-with [s p] ((.subscribe ^Publisher p ^Subscriber s) s))
+  p/TimingOperator
+  (-elapsed [flux scheduler] (.elapsed flux scheduler))
+  (-timed [flux scheduler] (.timed flux scheduler))
+  (-timestamp [flux scheduler] (.timestamp flux scheduler))
+  p/WindowOperator
+  (-window [flux max-size skip] (.window flux max-size skip))
+  (-window-duration
+    ([flux duration scheduler]
+     (.window flux (ms->duration duration) scheduler))
+    ([flux duration every scheduler]
+     (.window flux (ms->duration duration) (ms->duration every) scheduler)))
+  (-window-timeout
+    [flux max-size max-time scheduler fair-backpressure?]
+    (.windowTimeout flux max-size (ms->duration max-time) scheduler fair-backpressure?))
+  (-window-until [flux predicate cut-before?]
+    (.windowUntil flux (sam/->predicate predicate) cut-before?))
+  (-window-until-changed [flux key-fn key-comparator]
+    (.windowUntilChanged flux (sam/->function key-fn) (sam/->bi-predicate key-comparator)))
+  (-window-while [flux predicate] (.windowWhile flux (sam/->predicate predicate)))
   p/DelayOperator
   (-delay-elements [flux duration] (.delayElements flux (ms->duration duration)))
   (-delay-sequence [flux duration] (.delaySequence flux (ms->duration duration)))
+  (-delay-subscription [flux duration-or-publisher]
+    (->> (if (instance? Publisher duration-or-publisher)
+           duration-or-publisher
+           (delay->duration duration-or-publisher))
+         (.delaySubscription flux)))
   p/MergeOperator
   (-merge-with [flux other] (.mergeWith flux ^Publisher other))
   p/OnErrorOperator
@@ -199,10 +237,13 @@
     ([flux data] (.onErrorReturn flux data))
     ([flux data of-type?] (.onErrorReturn flux (sam/->predicate of-type?) data)))
   p/PublishOperator
-  (-publish [flux transformer] (.publish flux (sam/->function transformer)))
-  (-publish-on [flux scheduler] (.publishOn flux scheduler))
+  (-publish
+    ([flux prefetch] (.publish flux prefetch))
+    ([flux transformer prefetch] (.publish flux (sam/->function transformer) prefetch)))
+  (-publish-on [flux scheduler prefetch] (.publishOn flux scheduler prefetch))
   p/RepeatOperator
-  (-repeat [flux should-repeat? max-times] (.repeat flux max-times (sam/->boolean-supplier should-repeat?)))
+  (-repeat [flux should-repeat? max-times]
+    (.repeat flux max-times (sam/->boolean-supplier should-repeat?)))
   p/SingleOperator
   (-single
     ([flux] (.single flux))
@@ -213,8 +254,6 @@
   p/ShareOperator
   (-share [flux] (.share flux))
   (-share-next [flux] (.shareNext flux))
-  p/SwitchOperator
-  (-switch-if-empty [flux alternative] (.switchIfEmpty flux alternative))
   p/CacheOperator
   (-cache [flux ttl max-items] (.cache flux max-items ^Duration (ms->duration ttl)))
   p/ThenOperator
@@ -223,26 +262,33 @@
     ([flux other] (.then flux ^Publisher other)))
   (-then-empty [flux other] (.thenEmpty flux ^Publisher other))
   (-then-many [flux other] (.thenMany flux ^Publisher other))
-  p/TransformOperator
-  (-transform [flux transformer] (.transform flux (sam/->function transformer)))
-  (-as [flux transformer] (.as flux (sam/->function transformer)))
-  p/SkipLastOperator
-  (-skip-last [flux n] (.skipLast flux n))
-  p/TakeLastOperator
-  (-take-last [flux n] (.takeLast flux n))
-  p/IgnoreElementsOperator
+  p/IgnoreOperator
   (-ignore-elements [flux] (.ignoreElements flux))
+  p/BlockOperator
+  (-block
+    ([flux] (p/-block-last flux))
+    ([flux timeout] (p/-block-last flux timeout)))
+  (-block-first
+    ([flux] (.blockFirst flux))
+    ([flux timeout] (.blockFirst flux (ms->duration timeout))))
+  (-block-last
+    ([flux] (.blockLast flux))
+    ([flux timeout] (.blockLast flux (ms->duration timeout))))
   p/BufferOperator
   (-buffer [flux max-size skip] (.buffer flux max-size skip))
   (-buffer-timeout [flux max-size duration] (.bufferTimeout flux max-size (ms->duration duration)))
-  (-buffer-until [flux f] (.bufferUntil flux (sam/->predicate f)))
+  (-buffer-until [flux f cut-before?] (.bufferUntil flux (sam/->predicate f) cut-before?))
   (-buffer-while [flux f] (.bufferWhile flux (sam/->predicate f)))
   p/CountOperator
   (-count [flux] (.count flux))
+  p/IndexOperator
+  (-index [flux index-mapper] (.index flux (sam/->bi-function index-mapper)))
   p/HasElementOperator
   (-has-elements? [flux] (.hasElements flux))
   (-has-element? [flux data] (.hasElement flux data))
   p/CollectOperator
+  (-collect [flux container collector]
+    (.collect flux (sam/value->supplier container) (sam/->bi-consumer collector)))
   (-collect-list [flux] (.collectList flux))
   (-collect-map [flux key-fn value-fn] (.collectMap flux (sam/->function key-fn) (sam/->function value-fn)))
   p/MatchOperator
@@ -251,17 +297,26 @@
   p/NextOperator
   (-next [flux] (.next flux))
   p/ParallelOperator
-  (-parallel [flux] (.parallel flux))
+  (-parallel [flux parallelism prefetch]
+    (.parallel flux parallelism prefetch))
   p/ReplayOperator
-  (-replay [flux] (.replay flux))
+  (-replay [flux max-items ttl scheduler]
+    (.replay flux max-items (ms->duration ttl) scheduler))
   p/DistinctOperator
   (-distinct [flux key-fn] (.distinct flux (sam/->function key-fn)))
+  (-distinct-until-changed [flux key-fn key-comparator]
+    (.distinctUntilChanged flux (sam/->function key-fn) (sam/->bi-predicate key-comparator)))
   p/BackpressureOperator
-  (-on-backpressure-buffer [flux] (.onBackpressureBuffer flux))
-  p/ReduceOperator
-  (-reduce
-    ([flux f] (.reduce flux (sam/->bi-function f)))
-    ([flux initial f] (.reduce flux initial (sam/->bi-function f))))
+  (-on-backpressure-buffer
+    ([flux]
+     (.onBackpressureBuffer flux))
+    ([flux max-size on-overflow]
+     (.onBackpressureBuffer flux max-size (sam/->consumer on-overflow))))
+  (-on-backpressure-drop
+    ([flux] (.onBackpressureDrop flux))
+    ([flux on-dropped] (.onBackpressureDrop flux (sam/->consumer on-dropped))))
+  (-on-backpressure-error [flux] (.onBackpressureError flux))
+  (-on-backpressure-latest [flux] (.onBackpressureLatest flux))
   p/HandleOperator
   (-handle [flux f] (.handle flux (sam/->bi-consumer f))))
 

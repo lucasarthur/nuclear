@@ -16,15 +16,37 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with Nuclear. If not, see <http://www.gnu.org/licenses/>.
 
-(ns nuclear.reducers
-  (:refer-clojure :exclude [reduce])
-  (:require 
-   [nuclear.operations :refer [reduce]]
-   [clojure.core.protocols :refer [CollReduce]])
-  (:import (reactor.core.publisher Flux)))
+(ns nuclear.sink.core
+  (:require
+   [nuclear.sink.flux_sink]
+   [nuclear.sink.mono_sink]
+   [nuclear.sink.empty]
+   [nuclear.sink.many]
+   [nuclear.sink.one]
+   [nuclear.sink.protocols :as p]))
 
-(extend-protocol CollReduce
-  Flux
-  (coll-reduce
-    ([this f] (reduce f this))
-    ([this f start] (reduce f start this))))
+(def ^:private default-error
+  (ex-info "sink error" {:cause :unknown
+                         :type :sink-error}))
+
+(defn try-emit-value [value sink]
+  (p/-try-emit-value sink value))
+
+(defn try-emit-empty [sink]
+  (p/-try-emit-empty sink))
+
+(defn try-emit-error
+  ([sink] (try-emit-error default-error sink))
+  ([error sink] (p/-try-emit-error sink error)))
+
+(defn try-emit-complete [sink]
+  (p/-try-emit-complete sink))
+
+(defn subscriber-count [sink]
+  (p/-subscriber-count sink))
+
+(defn ->flux [many]
+  (.asFlux many))
+
+(defn ->mono [one-or-empty]
+  (.asMono one-or-empty))

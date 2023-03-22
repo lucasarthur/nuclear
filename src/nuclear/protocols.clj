@@ -18,45 +18,32 @@
 
 (ns nuclear.protocols)
 
-(defprotocol MapOperator
-  (-map [publisher transformer]))
-
-(defprotocol FlatMapOperator
+(defprotocol TransformOperator
+  (-transform [publisher transformer])
+  (-as [publisher transformer])
+  (-map [publisher transformer])
   (-flat-map [publisher transformer])
-  (-concat-map [publisher transformer] [publisher transformer prefetch])
   (-flat-map-iterable [publisher transformer])
   (-flat-map-sequential [publisher transformer])
-  (-flat-map-many [publisher transformer]))
-
-(defprotocol HandleOperator
-  (-handle [publisher handler]))
+  (-flat-map-many [publisher transformer])
+  (-concat-map [publisher transformer] [publisher transformer prefetch])
+  (-reduce [publisher reducer] [publisher initial reducer])
+  (-filter [publisher predicate])
+  (-filter-when [publisher async-predicate]))
 
 (defprotocol ConcatOperator
   (-concat-with [publisher other])
-  (-concat-values [publisher values]))
-
-(defprotocol NextOperator
-  (-next [publisher]))
-
-(defprotocol ParallelOperator
-  (-parallel [publisher]))
-
-(defprotocol ReplayOperator
-  (-replay [publisher]))
-
-(defprotocol DistinctOperator
-  (-distinct [publisher key-extractor]))
-
-(defprotocol BackpressureOperator
-  (-on-backpressure-buffer [publisher]))
-
-(defprotocol ReduceOperator
-  (-reduce [publisher reducer] [publisher initial reducer]))
+  (-concat-values [publisher values])
+  (-start-with [publisher values]))
 
 (defprotocol MergeOperator
   (-merge-with [publisher other]))
 
-(defprotocol DefaultIfEmptyOperator
+(defprotocol HandleOperator
+  (-handle [publisher handler]))
+
+(defprotocol SwitchOperator
+  (-switch-if-empty [publisher alternative])
   (-default-if-empty [publisher default-value]))
 
 (defprotocol DoOnOperator
@@ -76,50 +63,27 @@
   (-on-error-complete [publisher] [publisher of-type?])
   (-on-error-continue [publisher consumer] [publisher consumer of-type?])
   (-on-error-stop [publisher])
-  (-on-error-resume [publisher f] [publisher f of-type?])
+  (-on-error-resume [publisher handler] [publisher handler of-type?])
   (-on-error-return [publisher data] [publisher data of-type?]))
-
-(defprotocol FilterOperator
-  (-filter [publisher predicate])
-  (-filter-when [publisher async-predicate]))
 
 (defprotocol DelayOperator
   (-delay-elements [publisher duration])
-  (-delay-sequence [publisher duration]))
+  (-delay-sequence [publisher duration])
+  (-delay-subscription [publisher duration-or-publisher]))
 
 (defprotocol RepeatOperator
   (-repeat [publisher should-repeat? max-times]))
 
-(defprotocol CountOperator
-  (-count [publisher]))
-
 (defprotocol HasElementOperator
   (-has-elements? [publisher])
-  (-has-element? [publisher data]))
-
-(defprotocol CollectOperator
-  (-collect-list [publisher])
-  (-collect-map [publisher key-extractor value-extractor]))
-
-(defprotocol MatchOperator
-  (-all-match? [publisher predicate])
-  (-any-match? [publisher predicate]))
-
-(defprotocol BufferOperator
-  (-buffer [publisher max-size skip])
-  (-buffer-timeout [publisher max-size duration])
-  (-buffer-until [publisher predicate])
-  (-buffer-while [publisher predicate]))
+  (-has-element? [publisher value]))
 
 (defprotocol SingleOperator
   (-single [publisher] [publisher default-value])
-  (-single-or-empty [publisher]))
+  (-single-or-empty [publisher])) ;; test this on mono
 
 (defprotocol RetryOperator
   (-retry [publisher max-retries]))
-
-(defprotocol SwitchOperator
-  (-switch-if-empty [publisher alternative]))
 
 (defprotocol CacheOperator
   (-cache [publisher ttl max-items]))
@@ -130,28 +94,25 @@
   (-then-empty [publisher other])
   (-then-many [publisher other]))
 
-(defprotocol TransformOperator
-  (-transform [publisher transformer])
-  (-as [publisher transformer]))
-
 (defprotocol ShareOperator
   (-share [publisher])
   (-share-next [publisher]))
 
-(defprotocol IgnoreElementsOperator
+(defprotocol IgnoreOperator
   (-ignore-elements [publisher]))
 
 (defprotocol SkipOperator
-  (-skip [publisher n]))
-
-(defprotocol SkipLastOperator
+  (-skip [publisher n])
+  (-skip-duration [publisher duration])
+  (-skip-until [publisher predicate])
+  (-skip-while [publisher predicate])
   (-skip-last [publisher n]))
 
 (defprotocol TakeOperator
-  (-take [publisher n]))
-
-(defprotocol TakeLastOperator
-  (-take-last [publisher n]))
+  (-take [publisher n])
+  (-take-last [publisher n])
+  (-take-until [publisher predicate])
+  (-take-while [publisher predicate]))
 
 (defprotocol ZipOperator
   (-zip-with
@@ -164,17 +125,74 @@
 (defprotocol HideOperator
   (-hide [publisher]))
 
-(defprotocol TakeUntilOperator
-  (-take-until [publisher other]))
-
-(defprotocol TakeWhileOperator
-  (-take-while [publisher predicate]))
-
 (defprotocol SubscribeOperator
   (-subscribe [publisher on-next on-error on-complete on-subscribe])
   (-subscribe-on [publisher scheduler])
   (-subscribe-with [subscriber publisher]))
 
 (defprotocol PublishOperator
-  (-publish [publisher transformer])
-  (-publish-on [publisher scheduler]))
+  (-publish
+    [publisher prefetch]
+    [publisher transformer prefetch])
+  (-publish-on [publisher scheduler prefetch]))
+
+(defprotocol WindowOperator
+  (-window [publisher max-size skip])
+  (-window-duration
+    [publisher duration scheduler]
+    [publisher duration every scheduler])
+  (-window-timeout
+    [publisher max-size max-time scheduler fair-backpressure?])
+  (-window-until [publisher predicate cut-before?])
+  (-window-until-changed [publisher key-selector key-comparator])
+  (-window-while [publisher predicate]))
+
+(defprotocol NextOperator
+  (-next [publisher]))
+
+(defprotocol ParallelOperator
+  (-parallel [publisher parallelism prefetch]))
+
+(defprotocol ReplayOperator
+  (-replay [publisher max-items ttl scheduler]))
+
+(defprotocol DistinctOperator
+  (-distinct [publisher key-selector])
+  (-distinct-until-changed [publisher key-selector key-comparator]))
+
+(defprotocol BackpressureOperator
+  (-on-backpressure-buffer [publisher] [publisher max-size on-overflow])
+  (-on-backpressure-drop [publisher] [publisher on-dropped])
+  (-on-backpressure-error [publisher])
+  (-on-backpressure-latest [publisher]))
+
+(defprotocol CountOperator
+  (-count [publisher]))
+
+(defprotocol IndexOperator
+  (-index [publisher mapper]))
+
+(defprotocol CollectOperator
+  (-collect [publisher container collector])
+  (-collect-list [publisher])
+  (-collect-map [publisher key-extractor value-extractor]))
+
+(defprotocol MatchOperator
+  (-all-match? [publisher predicate])
+  (-any-match? [publisher predicate]))
+
+(defprotocol BufferOperator
+  (-buffer [publisher max-size skip])
+  (-buffer-timeout [publisher max-size duration])
+  (-buffer-until [publisher predicate cut-before?])
+  (-buffer-while [publisher predicate]))
+
+(defprotocol BlockOperator
+  (-block [publisher] [publisher timeout])
+  (-block-first [publisher] [publisher timeout])
+  (-block-last [publisher] [publisher timeout]))
+
+(defprotocol TimingOperator
+  (-elapsed [publisher scheduler])
+  (-timed [publisher scheduler])
+  (-timestamp [publisher scheduler]))

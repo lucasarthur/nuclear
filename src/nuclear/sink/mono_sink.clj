@@ -17,8 +17,10 @@
 ;; along with Nuclear. If not, see <http://www.gnu.org/licenses/>.
 
 (ns nuclear.sink.mono-sink
-  (:require [nuclear.sink.protocols :as p])
-  (:import [reactor.core.publisher MonoSink]))
+  (:require
+   [nuclear.sink.protocols :as p])
+  (:import
+   (reactor.core.publisher MonoSink)))
 
 (extend-type MonoSink
   p/EmitOperator

@@ -17,7 +17,8 @@
 ;; along with Nuclear. If not, see <http://www.gnu.org/licenses/>.
 
 (ns nuclear.adapter.rx2
-  (:require [nuclear.util :refer [keyword->enum]])
+  (:require
+   [nuclear.util :refer [keyword->enum]])
   (:import
    (reactor.adapter.rxjava RxJava2Adapter)
    (io.reactivex BackpressureStrategy)))

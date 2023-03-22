@@ -18,7 +18,8 @@
 
 (ns nuclear.sink.sinks
   (:refer-clojure :exclude [empty])
-  (:require [nuclear.util :refer [ms->duration]])
+  (:require
+   [nuclear.util :refer [ms->duration]])
   (:import
    (reactor.core.publisher Sinks)
    (java.time Duration)))
@@ -29,11 +30,9 @@
     (= spec-type :replay) (.replay many)
     :else (.multicast many)))
 
-(defn empty []
-  (Sinks/empty))
+(def empty (Sinks/empty))
 
-(defn one []
-  (Sinks/one))
+(def one (Sinks/one))
 
 (defn many [spec-type]
   (->> (Sinks/many) (->many-spec spec-type)))

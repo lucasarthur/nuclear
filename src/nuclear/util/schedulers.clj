@@ -17,7 +17,12 @@
 ;; along with Nuclear. If not, see <http://www.gnu.org/licenses/>.
 
 (ns nuclear.util.schedulers
-  (:import (reactor.core.scheduler Schedulers)))
+  (:import
+   (reactor.core.scheduler Schedulers)))
+
+(def default-pool-size (Schedulers/DEFAULT_POOL_SIZE))
+(def default-bounded-elastic-size (Schedulers/DEFAULT_BOUNDED_ELASTIC_SIZE))
+(def default-bounded-elastic-queue-size (Schedulers/DEFAULT_BOUNDED_ELASTIC_QUEUESIZE))
 
 (def bounded-elastic (Schedulers/boundedElastic))
 (def parallel (Schedulers/parallel))

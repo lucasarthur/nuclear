@@ -16,33 +16,27 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with Nuclear. If not, see <http://www.gnu.org/licenses/>.
 
-(ns nuclear.sink.operations
-  (:require
-   [nuclear.sink.flux_sink]
-   [nuclear.sink.mono_sink]
-   [nuclear.sink.empty]
-   [nuclear.sink.many]
-   [nuclear.sink.one]
-   [nuclear.sink.protocols :as p]))
+(ns nuclear.util.queues
+  (:refer-clojure :exclude [empty])
+  (:import
+   (reactor.util.concurrent Queues)))
 
-(defn try-emit-value [value sink]
-  (p/-try-emit-value sink value))
+(def empty (-> (Queues/empty) .get))
+(def one (-> (Queues/one) .get))
+(def small (-> (Queues/small) .get))
+(def xs (-> (Queues/xs) .get))
+(def unbounded-mp (-> (Queues/unboundedMultiproducer) .get))
 
-(defn try-emit-empty [sink]
-  (p/-try-emit-empty sink))
+(def capacity-unsure (Queues/CAPACITY_UNSURE))
+(def xs-buffer-size (Queues/XS_BUFFER_SIZE))
+(def small-buffer-size (Queues/SMALL_BUFFER_SIZE))
 
-(defn try-emit-error
-  ([sink] (try-emit-error (ex-info "error" {:cause :unknown}) sink))
-  ([error sink] (p/-try-emit-error sink error)))
+(defn unbounded
+  ([] (-> (Queues/unbounded) .get))
+  ([link-size] (-> link-size (Queues/unbounded) .get)))
 
-(defn try-emit-complete [sink]
-  (p/-try-emit-complete sink))
+(defn for-batch-size [batch-size]
+  (-> batch-size (Queues/get) .get))
 
-(defn subscriber-count [sink]
-  (p/-subscriber-count sink))
-
-(defn ->flux [many]
-  (.asFlux many))
-
-(defn ->mono [one-or-empty]
-  (.asMono one-or-empty))
+(defn capacity-for [queue]
+  (Queues/capacity queue))

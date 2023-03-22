@@ -17,8 +17,10 @@
 ;; along with Nuclear. If not, see <http://www.gnu.org/licenses/>.
 
 (ns nuclear.sink.one
-  (:require [nuclear.sink.protocols :as p])
-  (:import (reactor.core.publisher Sinks$One)))
+  (:require
+   [nuclear.sink.protocols :as p])
+  (:import
+   (reactor.core.publisher Sinks$One)))
 
 (extend-type Sinks$One
   p/EmitOperator

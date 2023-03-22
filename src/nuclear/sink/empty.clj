@@ -18,8 +18,10 @@
 
 (ns nuclear.sink.empty
   (:refer-clojure :exclude [empty])
-  (:require [nuclear.sink.protocols :as p])
-  (:import (reactor.core.publisher Sinks$Empty)))
+  (:require
+   [nuclear.sink.protocols :as p])
+  (:import
+   (reactor.core.publisher Sinks$Empty)))
 
 (extend-type Sinks$Empty
   p/EmitOperator

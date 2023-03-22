@@ -16,13 +16,13 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with Nuclear. If not, see <http://www.gnu.org/licenses/>.
 
-(ns nuclear.sink.flux-sink
+(ns nuclear.sink.synchronous-sink
   (:require
    [nuclear.sink.protocols :as p])
   (:import
-   (reactor.core.publisher FluxSink)))
+   (reactor.core.publisher SynchronousSink)))
 
-(extend-type FluxSink
+(extend-type SynchronousSink
   p/EmitOperator
   (-try-emit-value [sink value] (.next sink value))
   (-try-emit-complete [sink] (.complete sink))

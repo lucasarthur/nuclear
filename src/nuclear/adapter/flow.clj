@@ -17,7 +17,8 @@
 ;; along with Nuclear. If not, see <http://www.gnu.org/licenses/>.
 
 (ns nuclear.adapter.flow
-  (:import (reactor.adapter JdkFlowAdapter)))
+  (:import
+   (reactor.adapter JdkFlowAdapter)))
 
 (defn publisher->flow [publisher]
   (JdkFlowAdapter/publisherToFlowPublisher publisher))

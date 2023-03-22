@@ -55,21 +55,26 @@
 (derive Mono ::mono)
 (derive Flux ::flux)
 
-(defmulti from ^Mono #(if (future? %) ::promise (type %)))
+(defn- from-dispatcher [x]
+  (cond
+    (future? x) ::promise
+    (fn? x) ::supplier
+    :else (type x)))
+
+(defmulti from ^Mono from-dispatcher)
+
 (defmethod from ::publisher [p] (Mono/from p))
 (defmethod from ::promise [^Future p] (-> p Futurity/shift Mono/fromFuture))
+(defmethod from ::supplier [f] (-> f sam/->supplier Mono/fromSupplier))
 
 (defn from-runnable [runnable]
   (Mono/fromRunnable (sam/->runnable runnable)))
 
-(defn from-supplier [supplier]
-  (Mono/fromSupplier (sam/->supplier supplier)))
-
 (defn ignoring-elements [source]
   (Mono/ignoreElements ^Publisher source))
 
-(defn defer [f]
-  (Mono/defer (sam/->supplier f)))
+(defn defer [supplier]
+  (Mono/defer (sam/->supplier supplier)))
 
 (defn using
   ([resource-supplier source-supplier resource-cleanup]
@@ -83,7 +88,12 @@
 
 (defn using-when
   ([resource-supplier resource-closure async-cleanup]
-   (using-when resource-supplier resource-closure async-cleanup (fn [resource _] (async-cleanup resource)) async-cleanup))
+   (using-when
+    resource-supplier
+    resource-closure
+    async-cleanup
+    (fn [resource _] (async-cleanup resource))
+    async-cleanup))
   ([resource-supplier resource-closure async-complete async-error async-cancel]
    (Mono/usingWhen
     resource-supplier
@@ -95,52 +105,59 @@
 (defn when [^Iterable sources]
   (Mono/when sources))
 
-(defn zip [sources f]
-  (cond
-    (= 2 (count sources)) (p/-zip-with (first sources) (second sources) f)
-    :else (Mono/zip ^Iterable sources (sam/->function f))))
+(defn zip [sources combinator]
+  (if (= 2 (count sources))
+    (p/-zip-with (first sources) (second sources) combinator)
+    (Mono/zip ^Iterable sources (sam/->function combinator))))
 
 (extend-type Mono
-  p/FlatMapOperator
-  (-flat-map [mono f] (.flatMap mono (sam/->function f)))
-  (-flat-map-iterable [mono f] (.flatMapIterable mono (sam/->function f)))
-  (-flat-map-many [mono f] (.flatMapMany mono (sam/->function f)))
-  p/MapOperator
-  (-map [mono f] (.map mono (sam/->function f)))
-  p/FilterOperator
-  (-filter [mono f] (.filter mono (sam/->predicate f)))
-  (-filter-when [mono f] (.filterWhen mono (sam/->function f)))
+  p/TransformOperator
+  (-transform [mono transformer] (.transform mono (sam/->function transformer)))
+  (-as [mono transformer] (.as mono (sam/->function transformer)))
+  (-map [mono mapper] (.map mono (sam/->function mapper)))
+  (-flat-map [mono mapper] (.flatMap mono (sam/->function mapper)))
+  (-flat-map-iterable [mono mapper] (.flatMapIterable mono (sam/->function mapper)))
+  (-flat-map-many [mono mapper] (.flatMapMany mono (sam/->function mapper)))
+  (-filter [mono pred] (.filter mono (sam/->predicate pred)))
+  (-filter-when [mono pred] (.filterWhen mono (sam/->function pred)))
+
   p/ZipOperator
   (-zip-with
     ([mono other] (.zipWith mono ^Publisher other))
-    ([mono other f] (.zipWith mono ^Publisher other (sam/->bi-function f))))
+    ([mono other combinator] (.zipWith mono ^Publisher other (sam/->bi-function combinator))))
   (-zip-when
-    ([mono f] (.zipWhen mono (sam/->function f)))
-    ([mono f c] (.zipWhen mono (sam/->function f) (sam/->bi-function c))))
+    ([mono generator] (.zipWhen mono (sam/->function generator)))
+    ([mono generator combinator] (.zipWhen mono (sam/->function generator) (sam/->bi-function combinator))))
+
   p/HideOperator
   (-hide [mono] (.hide mono))
-  p/TakeUntilOperator
+
+  p/TakeOperator
   (-take-until [mono other] (.takeUntilOther mono ^Publisher other))
+
   p/ConcatOperator
   (-concat-with [mono other] (.concatWith mono ^Publisher other))
-  p/DefaultIfEmptyOperator
+
+  p/SwitchOperator
   (-default-if-empty [mono default-value] (.defaultIfEmpty mono default-value))
+  (-switch-if-empty [mono alternative] (.switchIfEmpty mono alternative))
+
   p/DoOnOperator
-  (-after-terminate! [mono f] (.doAfterTerminate mono (sam/->runnable f)))
-  (-on-cancel! [mono f] (.doOnCancel mono (sam/->runnable f)))
-  (-on-signal! [mono f] (.doOnEach mono (sam/->consumer f)))
+  (-after-terminate! [mono runnable] (.doAfterTerminate mono (sam/->runnable runnable)))
+  (-on-cancel! [mono runnable] (.doOnCancel mono (sam/->runnable runnable)))
+  (-on-signal! [mono consumer] (.doOnEach mono (sam/->consumer consumer)))
   (-on-error!
-    ([mono f] (.doOnError mono (sam/->consumer f)))
-    ([mono of-type? f] (.doOnError mono (sam/->predicate of-type?) (sam/->consumer f))))
-  (-on-next! [mono f] (.doOnNext mono (sam/->consumer f)))
-  (-on-request! [mono f] (.doOnRequest mono (sam/->long-consumer f)))
-  (-on-subscribe! [mono f] (.doOnSubscribe mono (sam/->consumer f)))
-  (-on-terminate! [mono f] (.doOnTerminate mono (sam/->runnable f)))
-  (-first! [mono f] (.doFirst mono (sam/->runnable f)))
-  (-finally! [mono f] (.doFinally mono (sam/->consumer f)))
+    ([mono consumer] (.doOnError mono (sam/->consumer consumer)))
+    ([mono of-type? consumer] (.doOnError mono (sam/->predicate of-type?) (sam/->consumer consumer))))
+  (-on-next! [mono consumer] (.doOnNext mono (sam/->consumer consumer)))
+  (-on-request! [mono consumer] (.doOnRequest mono (sam/->long-consumer consumer)))
+  (-on-subscribe! [mono consumer] (.doOnSubscribe mono (sam/->consumer consumer)))
+  (-on-terminate! [mono runnable] (.doOnTerminate mono (sam/->runnable runnable)))
+  (-first! [mono runnable] (.doFirst mono (sam/->runnable runnable)))
+  (-finally! [mono consumer] (.doFinally mono (sam/->consumer consumer)))
+
   p/SubscribeOperator
-  (-subscribe
-    [mono on-next on-error on-complete on-subscribe]
+  (-subscribe [mono on-next on-error on-complete on-subscribe]
     (.subscribe mono
                 (sam/->consumer on-next)
                 (sam/->consumer on-error)
@@ -148,43 +165,71 @@
                 (sam/->consumer on-subscribe)))
   (-subscribe-on [mono scheduler] (.subscribeOn mono scheduler))
   (-subscribe-with [s p] ((.subscribe ^Publisher p ^Subscriber s) s))
+
   p/DelayOperator
   (-delay-elements [mono duration] (.delayElement mono (ms->duration duration)))
+  (-delay-subscription [mono duration-or-publisher]
+    (->> (if (instance? Publisher duration-or-publisher)
+           duration-or-publisher
+           (delay->duration duration-or-publisher))
+         (.delaySubscription mono)))
+
   p/MergeOperator
   (-merge-with [mono other] (.mergeWith mono ^Publisher other))
+
   p/OnErrorOperator
   (-on-error-complete
     ([mono] (.onErrorComplete mono))
     ([mono of-type?] (.onErrorComplete mono (sam/->predicate of-type?))))
   (-on-error-continue
-    ([mono f] (.onErrorContinue mono (sam/->bi-consumer f)))
-    ([mono f of-type?] (.onErrorContinue mono (sam/->predicate of-type?) (sam/->bi-consumer f))))
+    ([mono consumer] (.onErrorContinue mono (sam/->bi-consumer consumer)))
+    ([mono consumer of-type?] (.onErrorContinue mono (sam/->predicate of-type?) (sam/->bi-consumer consumer))))
   (-on-error-stop [mono] (.onErrorStop mono))
   (-on-error-resume
-    ([mono f] (.onErrorResume mono (sam/->function f)))
-    ([mono f of-type?] (.onErrorResume mono (sam/->predicate of-type?) (sam/->function f))))
+    ([mono handler] (.onErrorResume mono (sam/->function handler)))
+    ([mono handler of-type?] (.onErrorResume mono (sam/->predicate of-type?) (sam/->function handler))))
   (-on-error-return
     ([mono data] (.onErrorReturn mono data))
     ([mono data of-type?] (.onErrorReturn mono (sam/->predicate of-type?) data)))
+
   p/PublishOperator
   (-publish [mono transformer] (.publish mono (sam/->function transformer)))
   (-publish-on [mono scheduler] (.publishOn mono scheduler))
-  p/IgnoreElementsOperator
+
+  p/PublishOperator
+  (-publish [mono transformer _]
+    (.publish mono (sam/->function transformer)))
+  (-publish-on [mono scheduler _]
+    (.publishOn mono scheduler _))
+
+  p/IgnoreOperator
   (-ignore-elements [mono] (.ignoreElement mono))
+
   p/RepeatOperator
   (-repeat [mono should-repeat? max-times] (.repeat mono max-times (sam/->boolean-supplier should-repeat?)))
+
   p/SingleOperator
   (-single
     ([mono] (.single mono))
-    ([mono _] (p/-single mono)))
+    ([mono default-value]
+     (-> (.singleOptional mono)
+         (p/-map #(.orElse % default-value)))))
+  (-single-or-empty [mono]
+    (-> (.singleOptional mono)
+        (p/-flat-map (fn [optional]
+                       (-> (.map optional (sam/->function just))
+                           (.orElse (empty)))))))
+
   p/RetryOperator
   (-retry [mono max-retries] (.retry mono max-retries))
+
   p/ShareOperator
   (-share [mono] (.share mono))
-  p/SwitchOperator
-  (-switch-if-empty [mono alternative] (.switchIfEmpty mono alternative))
+  (-share-next [mono] (.share mono))
+
   p/CacheOperator
   (-cache [mono ttl _] (.cache mono ^Duration (ms->duration ttl)))
+
   p/ThenOperator
   (-then
     ([mono] (.then mono))
@@ -192,14 +237,36 @@
   (-then-empty [mono other] (.thenEmpty mono ^Publisher other))
   (-then-many [mono other] (.thenMany mono ^Publisher other))
   (-then-return [mono default-value] (.thenReturn mono default-value))
-  p/TransformOperator
-  (-transform [mono transformer] (.transform mono (sam/->function transformer)))
-  (-as [mono transformer] (.as mono (sam/->function transformer)))
+
   p/HasElementOperator
   (-has-elements? [mono] (.hasElement mono))
-  (-has-element? [mono data] (p/-map mono #(= data %)))
+  (-has-element? [mono value] (p/-map mono #(= value %)))
+
   p/HandleOperator
-  (-handle [mono f] (.handle mono (sam/->bi-consumer f))))
+  (-handle [mono handler] (.handle mono (sam/->bi-consumer handler)))
+
+  p/CountOperator
+  (-count [mono] (-> (p/-has-elements? mono) (p/-map #(if % 1 0))))
+
+  p/MatchOperator
+  (-all-match? [mono predicate] (p/-map mono predicate))
+  (-any-match? [mono predicate] (p/-map mono predicate))
+
+  p/BlockOperator
+  (-block
+    ([mono] (.block mono))
+    ([mono timeout] (.block mono (ms->duration timeout))))
+  (-block-first
+    ([mono] (p/-block mono))
+    ([mono timeout] (p/-block mono timeout)))
+  (-block-last
+    ([mono] (p/-block mono))
+    ([mono timeout] (p/-block mono timeout)))
+
+  p/TimingOperator
+  (-elapsed [mono scheduler] (.elapsed mono scheduler))
+  (-timed [mono scheduler] (.timed mono scheduler))
+  (-timestamp [mono scheduler] (.timestamp mono scheduler)))
 
 (defn ->flux [^Mono mono]
   (.flux mono))

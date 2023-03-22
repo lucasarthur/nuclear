@@ -250,8 +250,8 @@
 (defn single-or-empty [publisher]
   (p/-single-or-empty publisher))
 
-(defn has-element? [data publisher]
-  (p/-has-element? publisher data))
+(defn has-element? [value publisher]
+  (p/-has-element? publisher value))
 
 (defn has-elements? [publisher]
   (p/-has-elements? publisher))

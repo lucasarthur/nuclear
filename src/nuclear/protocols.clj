@@ -112,7 +112,7 @@
 
 (defprotocol HasElementOperator
   (-has-elements? [publisher])
-  (-has-element? [publisher data]))
+  (-has-element? [publisher value]))
 
 (defprotocol CollectOperator
   (-collect [publisher container collector])
